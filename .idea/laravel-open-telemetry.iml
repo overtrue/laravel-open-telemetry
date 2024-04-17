@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="WEB_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" packagePrefix="Overtrue\LaravelOpenTelemetry\" />
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" packagePrefix="Overtrue\LaravelOpenTelemetry\Tests\" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/grpc/grpc" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/laravel/pint" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/open-telemetry/transport-grpc" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

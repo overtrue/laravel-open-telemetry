@@ -1,0 +1,52 @@
+{
+    "name": "overtrue/laravel-open-telemetry",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Overtrue\\LaravelOpenTelemetry\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "overtrue",
+            "email": "anzhengchao@gmail.com"
+        }
+    ],
+    "require": {
+        "open-telemetry/sdk": "*",
+        "open-telemetry/exporter-otlp": "*",
+        "open-telemetry/transport-grpc": "^1.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0",
+        "laravel/pint": "^1.15"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Overtrue\\LaravelOpenTelemetry\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "\\Overtrue\\LaravelOpenTelemetry\\OpenTelemetryServiceProvider"
+            ]
+        }
+    },
+    "scripts-descriptions": {
+        "test": "Run all tests.",
+        "check-style": "Run style checks (only dry run - no fixing!).",
+        "fix-style": "Run style checks and fix violations."
+    },
+    "scripts": {
+        "check-style": "vendor/bin/pint --test",
+        "fix-style": "vendor/bin/pint",
+        "test": "phpunit --colors"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
