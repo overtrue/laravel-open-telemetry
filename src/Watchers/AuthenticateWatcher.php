@@ -16,7 +16,7 @@ class AuthenticateWatcher implements Watcher
     public function register(Application $app): void
     {
         Event::listen(Login::class, function (Login $event) {
-            $span = Measure::getCurrentSpan();
+            $span = Measure::activeSpan();
 
             if ($span instanceof Span) {
                 $span->setAttribute(TraceAttributes::DB_USER, $event->user->getKey());

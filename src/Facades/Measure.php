@@ -4,17 +4,20 @@ namespace Overtrue\LaravelOpenTelemetry\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\TracerInterface;
+use OpenTelemetry\Context\ContextInterface;
+use OpenTelemetry\Context\ScopeInterface;
+use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
 
 /**
- * @method static SpanInterface start(string $name, array $attributes = [], int $kind = SpanKind::KIND_SERVER)
- * @method static SpanInterface|null end(string $name, array $attributes = [])
- * @method static SpanInterface|null event(string $name, iterable $attributes = [], int $timestamp = null)
- * @method static SpanInterface|null getCurrentSpan()
- * @method static SpanInterface|null getSpan(string $name)
- * @method static array startedSpans()
+ * @method static SpanBuilder span(string $name)
+ * @method static void end()
+ * @method static SpanInterface activeSpan()
+ * @method static ScopeInterface|null activeScope()
  * @method static TracerInterface getTracer(?string $name = null)
+ * @method static string traceId()
+ * @method static array propagationHeaders(?ContextInterface $context = null)
+ * @method static ContextInterface extractContextFromPropagationHeaders(array $headers)
  */
 class Measure extends Facade
 {

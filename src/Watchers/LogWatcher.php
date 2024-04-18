@@ -6,14 +6,13 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Log\Events\MessageLogged;
-use OpenTelemetry\API\Trace\Span;
-use OpenTelemetry\Context\Context;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 class LogWatcher implements Watcher
 {
     public function register(Application $app): void
     {
-        $app['events']->listen(MessageLogged::class, [$this, 'recordLog']);
+        $app['events']->listen(MessageLogged::class, $this->recordLog(...));
     }
 
     public function recordLog(MessageLogged $log): void
@@ -26,11 +25,6 @@ class LogWatcher implements Watcher
 
         $message = $log->message;
 
-        $scope = Context::storage()->scope();
-        if (! $scope) {
-            return;
-        }
-        $span = Span::fromContext($scope->context());
-        $span->addEvent($message, $attributes);
+        Measure::activeSpan()->addEvent($message, $attributes);
     }
 }

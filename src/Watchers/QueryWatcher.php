@@ -10,12 +10,15 @@ use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
 
 class QueryWatcher implements Watcher
 {
+    use InteractWithEventTimestamp;
+
     public function register(Application $app): void
     {
-        $app['events']->listen(QueryExecuted::class, [$this, 'recordQuery']);
+        $app['events']->listen(QueryExecuted::class, $this->recordQuery(...));
     }
 
     public function recordQuery(QueryExecuted $query): void
@@ -27,11 +30,10 @@ class QueryWatcher implements Watcher
             $operationName = null;
         }
 
-        $span = Measure::getTracer()
-            ->spanBuilder('[DB] '.$operationName)
-            ->setSpanKind(SpanKind::KIND_SERVER)
-            ->setStartTimestamp($this->calculateQueryStartTime($nowInNs, $query->time))
-            ->startSpan();
+        $span = Measure::span(sprintf('[DB] %s', $operationName))
+            ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setStartTimestamp($this->getEventStartTimestampNs($query->time))
+            ->start();
 
         $attributes = [
             TraceAttributes::DB_SYSTEM => $query->connection->getDriverName(),
@@ -44,10 +46,5 @@ class QueryWatcher implements Watcher
 
         $span->setAttributes($attributes);
         $span->end($nowInNs);
-    }
-
-    private function calculateQueryStartTime(int $nowInNs, float $queryTimeMs): int
-    {
-        return (int) ($nowInNs - ($queryTimeMs * 1E6));
     }
 }

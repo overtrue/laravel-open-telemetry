@@ -9,18 +9,17 @@ use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\KeyForgotten;
 use Illuminate\Cache\Events\KeyWritten;
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Trace\Span;
-use OpenTelemetry\Context\Context;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 class CacheWatcher implements Watcher
 {
     public function register(Application $app): void
     {
-        $app['events']->listen(CacheHit::class, [$this, 'recordCacheHit']);
-        $app['events']->listen(CacheMissed::class, [$this, 'recordCacheMiss']);
+        $app['events']->listen(CacheHit::class, $this->recordCacheHit(...));
+        $app['events']->listen(CacheMissed::class, $this->recordCacheMiss(...));
 
-        $app['events']->listen(KeyWritten::class, [$this, 'recordCacheSet']);
-        $app['events']->listen(KeyForgotten::class, [$this, 'recordCacheForget']);
+        $app['events']->listen(KeyWritten::class, $this->recordCacheSet(...));
+        $app['events']->listen(KeyForgotten::class, $this->recordCacheForget(...));
     }
 
     public function recordCacheHit(CacheHit $event): void
@@ -70,13 +69,13 @@ class CacheWatcher implements Watcher
 
     private function addEvent(string $name, iterable $attributes = []): void
     {
-        $scope = Context::storage()->scope();
+        $scope = Measure::activeScope();
 
         if (! $scope) {
             return;
         }
 
-        $span = Span::fromContext($scope->context());
+        $span = Measure::activeSpan();
         $span->addEvent($name, $attributes);
     }
 }

@@ -5,7 +5,6 @@ namespace Overtrue\LaravelOpenTelemetry\Tests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Middlewares\StartTracing;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 
@@ -28,6 +27,7 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
             Http::get('https://httpbin.org/ip');
             Http::get('https://httpbin.org/get');
             Log::log('info', 'Hello, Laravel OpenTelemetry!');
+
             return 'Hello, Laravel OpenTelemetry!';
         });
     }

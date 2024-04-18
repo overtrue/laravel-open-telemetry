@@ -4,15 +4,10 @@ namespace Overtrue\LaravelOpenTelemetry\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
-use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
-use OpenTelemetry\Context\Context;
 use OpenTelemetry\Contrib\Propagation\ServerTiming\ServerTimingPropagator;
 use OpenTelemetry\Contrib\Propagation\TraceResponse\TraceResponsePropagator;
-use OpenTelemetry\SDK\Sdk;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\ResponsePropagationSetter;
@@ -21,12 +16,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class StartTracing
 {
-    public function handle(Request $request, Closure $next, ?string $tracer = null)
+    public function handle(Request $request, Closure $next, ?string $name = null)
     {
-        $tracer = $tracer ?? config('otle.default');
+        $name = $name ?? config('otle.default');
 
-        $this->registerTracer($tracer);
-        $this->registerWatchers($tracer);
+        /** @var \Overtrue\LaravelOpenTelemetry\Tracer $tracer */
+        $tracer = app(TracerManager::class)->driver($name);
+
+        $tracer->start(app());
+
+        $this->registerWatchers($name);
 
         $span = $this->startRequestSpan($request);
 
@@ -37,14 +36,14 @@ class StartTracing
 
     public function terminate(Request $request, Response $response): void
     {
-        $scope = Context::storage()->scope();
+        $scope = Measure::activeScope();
 
         if (! $scope) {
             return;
         }
 
         $scope->detach();
-        $span = Span::fromContext($scope->context());
+        $span = Measure::activeSpan();
 
         $span->setStatus(StatusCode::STATUS_OK);
 
@@ -83,47 +82,22 @@ class StartTracing
         return '';
     }
 
-    protected function registerTracer(string $name): void
-    {
-        /** @var \OpenTelemetry\SDK\Trace\TracerProviderInterface $tracer */
-        $tracer = app(TracerManager::class)->driver($name);
-
-        Sdk::builder()
-            ->setTracerProvider($tracer)
-            ->setPropagator(TraceContextPropagator::getInstance())
-            ->setAutoShutdown(true)
-            ->buildAndRegisterGlobal();
-    }
-
     protected function startRequestSpan(Request $request): SpanInterface
     {
-        return Measure::start(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()), [
-            TraceAttributes::URL_FULL => $request->fullUrl(),
-            TraceAttributes::HTTP_REQUEST_METHOD => $request->method(),
-            TraceAttributes::HTTP_REQUEST_BODY_SIZE => $request->header('Content-Length'),
-            TraceAttributes::URL_SCHEME => $request->getScheme(),
-            TraceAttributes::NETWORK_PROTOCOL_VERSION => $request->getProtocolVersion(),
-            TraceAttributes::NETWORK_PEER_ADDRESS => $request->ip(),
-            TraceAttributes::URL_PATH => $request->path(),
-            TraceAttributes::HTTP_ROUTE => $request->getUri(),
-            TraceAttributes::SERVER_ADDRESS => self::httpHostName($request),
-            TraceAttributes::SERVER_PORT => $request->getPort(),
-            TraceAttributes::CLIENT_PORT => $request->server('REMOTE_PORT'),
-            TraceAttributes::USER_AGENT_ORIGINAL => $request->userAgent(),
-        ]);
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return void
-     */
-    public function registerWatchers(string $name): void
-    {
-        $watchers = config("otle.{$name}.watchers", config('otle.global.watchers', []));
-
-        foreach ($watchers as $watcher) {
-            app($watcher)->register(app());
-        }
+        return Measure::span(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()))
+            ->setAttributes([
+                TraceAttributes::URL_FULL => $request->fullUrl(),
+                TraceAttributes::HTTP_REQUEST_METHOD => $request->method(),
+                TraceAttributes::HTTP_REQUEST_BODY_SIZE => $request->header('Content-Length'),
+                TraceAttributes::URL_SCHEME => $request->getScheme(),
+                TraceAttributes::NETWORK_PROTOCOL_VERSION => $request->getProtocolVersion(),
+                TraceAttributes::NETWORK_PEER_ADDRESS => $request->ip(),
+                TraceAttributes::URL_PATH => $request->path(),
+                TraceAttributes::HTTP_ROUTE => $request->getUri(),
+                TraceAttributes::SERVER_ADDRESS => self::httpHostName($request),
+                TraceAttributes::SERVER_PORT => $request->getPort(),
+                TraceAttributes::CLIENT_PORT => $request->server('REMOTE_PORT'),
+                TraceAttributes::USER_AGENT_ORIGINAL => $request->userAgent(),
+            ])->start();
     }
 }

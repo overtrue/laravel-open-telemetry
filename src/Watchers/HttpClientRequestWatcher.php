@@ -25,9 +25,9 @@ class HttpClientRequestWatcher implements Watcher
 
     public function register(Application $app): void
     {
-        $app['events']->listen(RequestSending::class, [$this, 'recordRequest']);
-        $app['events']->listen(ConnectionFailed::class, [$this, 'recordConnectionFailed']);
-        $app['events']->listen(ResponseReceived::class, [$this, 'recordResponse']);
+        $app['events']->listen(RequestSending::class, $this->recordRequest(...));
+        $app['events']->listen(ConnectionFailed::class, $this->recordConnectionFailed(...));
+        $app['events']->listen(ResponseReceived::class, $this->recordResponse(...));
     }
 
     public function recordRequest(RequestSending $request): void
@@ -41,14 +41,14 @@ class HttpClientRequestWatcher implements Watcher
 
         $name = sprintf('[HTTP] %s:%s', $request->request->method(), $processedUrl);
 
-        $span = Measure::start($name, [
+        $span = Measure::span($name)->setAttributes([
             TraceAttributes::HTTP_REQUEST_METHOD => $request->request->method(),
             TraceAttributes::URL_FULL => $processedUrl,
             TraceAttributes::URL_PATH => $parsedUrl['path'] ?? '',
             TraceAttributes::URL_SCHEME => $parsedUrl['scheme'] ?? '',
             TraceAttributes::SERVER_ADDRESS => $parsedUrl['host'] ?? '',
             TraceAttributes::SERVER_PORT => $parsedUrl['port'] ?? '',
-        ]);
+        ])->start();
 
         $this->spans[$this->createRequestComparisonHash($request->request)] = $span;
     }
@@ -63,7 +63,9 @@ class HttpClientRequestWatcher implements Watcher
         }
 
         $span->setStatus(StatusCode::STATUS_ERROR, 'Connection failed');
-        Measure::end();
+
+        Measure::activeScope()->detach();
+        Measure::activeSpan()->end();
 
         unset($this->spans[$requestHash]);
     }
@@ -84,7 +86,8 @@ class HttpClientRequestWatcher implements Watcher
 
         $this->maybeRecordError($span, $request->response);
 
-        Measure::end();
+        Measure::activeScope()->detach();
+        Measure::activeSpan()->end();
 
         unset($this->spans[$requestHash]);
     }

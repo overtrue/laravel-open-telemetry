@@ -42,17 +42,22 @@ return [
         'transport' => 'stream',
 
         // memory/console/otlp
-        'span_exporter' => 'console',
+        'span_exporter' => 'otlp',
 
         /**
          * Span processor, you can use your custom span processor by implementing `OpenTelemetry\SDK\Trace\SpanProcessorInterface` interface.
          */
-        'span_processor' => \OpenTelemetry\SDK\Trace\SpanProcessor\SimpleSpanProcessor::class,
+        'span_processor' => \OpenTelemetry\SDK\Trace\SpanProcessor\BatchSpanProcessor::class,
 
         /**
          * Id generator, you can use your custom id generator by implementing `OpenTelemetry\SDK\Trace\IdGeneratorInterface` interface.
          */
         'id_generator' => \OpenTelemetry\SDK\Trace\RandomIdGenerator::class,
+
+        'logs' => [
+            // memory/console/otlp
+            'exporter' => 'otlp',
+        ],
     ],
 
     'tracers' => [

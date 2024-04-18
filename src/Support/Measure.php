@@ -2,76 +2,51 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Support;
 
+use Illuminate\Contracts\Foundation\Application;
 use OpenTelemetry\API\Globals;
+use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
 use OpenTelemetry\API\Trace\Span;
+use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
-use Opentelemetry\Proto\Trace\V1\Span\SpanKind;
+use OpenTelemetry\Context\ContextInterface;
+use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
+use OpenTelemetry\Context\ScopeInterface;
 
 class Measure
 {
-    /**
-     * @var array<string, SpanInterface>
-     */
-    protected array $startedSpans = [];
-
-    public function __construct()
+    public function __construct(protected Application $app)
     {
+
     }
 
-    public function start(string $name, array $attributes = [], int $kind = SpanKind::SPAN_KIND_SERVER): SpanInterface
+    public function span(string $name): SpanBuilder
     {
-        $span = $this->getTracer()
-            ->spanBuilder($name)
-            ->setSpanKind($kind)
-            ->startSpan();
-
-        $span->setAttributes($attributes);
-
-        Context::storage()->attach($span->storeInContext(Context::getCurrent()));
-
-        $this->startedSpans[$name] = $span;
-
-        return $span;
+        return new SpanBuilder($this->getTracer()->spanBuilder($name));
     }
 
-    public function end(array $attributes = []): ?SpanInterface
+    public function end(): void
     {
-        $scope = Context::storage()->scope();
-        $scope->detach();
-        $span = Span::fromContext($scope->context());
-        $span->setStatus(StatusCode::STATUS_OK);
-        $span->setAttributes($attributes);
-        $span->end();
-
-        return $span;
+        $this->activeScope()?->detach();
+        $this->activeSpan()->end();
     }
 
-    public function event(string $name, iterable $attributes = [], ?int $timestamp = null): SpanInterface
+    public function activeSpan(): SpanInterface
     {
-        $this->current()->addEvent($name, $attributes, $timestamp);
-
-        return $this->current();
+        return Span::getCurrent();
     }
 
-    public function current(): SpanInterface
+    public function activeScope(): ?ScopeInterface
     {
-        return Span::fromContext(Context::getCurrent());
+        return Context::storage()->scope();
     }
 
-    public function getSpan(string $name): ?SpanInterface
+    public function traceId(): ?string
     {
-        return $this->startedSpans[$name] ?? null;
-    }
+        $traceId = $this->activeSpan()->getContext()->getTraceId();
 
-    /**
-     * @return array<string, SpanInterface>
-     */
-    public function startedSpans(): array
-    {
-        return $this->startedSpans;
+        return SpanContextValidator::isValidTraceId($traceId) ? $traceId : null;
     }
 
     public function getTracer(?string $name = null): TracerInterface
@@ -79,5 +54,24 @@ class Measure
         $name ??= config('otle.root_tracer_name', config('app.name'));
 
         return Globals::tracerProvider()->getTracer($name);
+    }
+
+    public function propagator()
+    {
+        return $this->app->make(TextMapPropagatorInterface::class) ?? TraceContextPropagator::class;
+    }
+
+    public function propagationHeaders(?ContextInterface $context = null): array
+    {
+        $headers = [];
+
+        $this->propagator()->inject($headers, context: $context);
+
+        return $headers;
+    }
+
+    public function extractContextFromPropagationHeaders(array $headers): ContextInterface
+    {
+        return $this->propagator()->extract($headers);
     }
 }
