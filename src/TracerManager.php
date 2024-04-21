@@ -15,26 +15,26 @@ class TracerManager extends Manager
 
     public function createConsoleDriver(): Tracer
     {
-        return $this->app(TracerFactory::class)->create('console');
+        return $this->container->make(TracerFactory::class)->create('console');
     }
 
     public function createLogDriver(): Tracer
     {
-        return $this->app(TracerFactory::class)->create('log');
+        return $this->container->make(TracerFactory::class)->create('log');
     }
 
     public function createHttpJsonDriver(): Tracer
     {
-        return $this->app(TracerFactory::class)->create('http-json');
+        return $this->container->make(TracerFactory::class)->create('http-json');
     }
 
     public function createHttpBinaryDriver(): Tracer
     {
-        return $this->app(TracerFactory::class)->create('http-binary');
+        return $this->container->make(TracerFactory::class)->create('http-binary');
     }
 
     public function createGrpcDriver(): Tracer
     {
-        return $this->app(TracerFactory::class)->create('grpc');
+        return $this->container->make(TracerFactory::class)->create('grpc');
     }
 }

@@ -13,6 +13,7 @@ use OpenTelemetry\SDK\Logs\LoggerProviderInterface;
 use OpenTelemetry\SDK\Sdk;
 use OpenTelemetry\SDK\Trace\TracerProviderInterface;
 use OpenTelemetry\SemConv\TraceAttributes;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 class Tracer
 {
@@ -32,7 +33,10 @@ class Tracer
         return $this;
     }
 
-    public function start(Application $app): void
+    /**
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     */
+    public function register(Application $app): void
     {
         $textMapPropagator = $this->textMapPropagator ?? TraceContextPropagator::getInstance();
 
@@ -53,6 +57,7 @@ class Tracer
         $app->bind(TracerInterface::class, fn () => $instrumentation->tracer());
         $app->bind(LoggerInterface::class, fn () => $instrumentation->logger());
 
+        // Register watchers.
         foreach ($this->watchers as $watcher) {
             $app->make($watcher)->register($app);
         }

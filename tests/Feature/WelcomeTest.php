@@ -10,6 +10,8 @@ class WelcomeTest extends TestCase
     {
         $response = $this->getJson('/');
 
+        $response->dd();
+
         $response->assertStatus(200);
     }
 }

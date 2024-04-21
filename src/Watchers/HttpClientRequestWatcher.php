@@ -12,6 +12,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\Response;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -64,8 +65,8 @@ class HttpClientRequestWatcher implements Watcher
 
         $span->setStatus(StatusCode::STATUS_ERROR, 'Connection failed');
 
-        Measure::activeScope()->detach();
-        Measure::activeSpan()->end();
+        Measure::activeScope()?->detach();
+        $span->end();
 
         unset($this->spans[$requestHash]);
     }
@@ -86,8 +87,8 @@ class HttpClientRequestWatcher implements Watcher
 
         $this->maybeRecordError($span, $request->response);
 
-        Measure::activeScope()->detach();
-        Measure::activeSpan()->end();
+        Measure::activeScope()?->detach();
+        $span->end();
 
         unset($this->spans[$requestHash]);
     }

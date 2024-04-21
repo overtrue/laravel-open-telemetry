@@ -11,7 +11,7 @@ use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
 
 /**
  * @method static SpanBuilder span(string $name)
- * @method static void end()
+ * @method static void end(?SpanInterface $span = null)
  * @method static SpanInterface activeSpan()
  * @method static ScopeInterface|null activeScope()
  * @method static TracerInterface getTracer(?string $name = null)

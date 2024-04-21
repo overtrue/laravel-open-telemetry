@@ -3,10 +3,10 @@
 namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Carbon\CarbonInterface;
-use Illuminate\Foundation\Bus\PendingDispatch;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
 
 // this file is copied from https://github.com/keepsuit/laravel-opentelemetry/blob/main/src/Support/SpanBuilder.php
@@ -69,31 +69,31 @@ class SpanBuilder
         return $this;
     }
 
-    public function start(): SpanInterface
+    public function start($attach = true): SpanInterface
     {
-        return $this->spanBuilder->startSpan();
+        $span = $this->spanBuilder->startSpan();
+
+//        $span->storeInContext(Context::getCurrent());
+//        $attach && Context::storage()->attach($span->storeInContext(Context::getCurrent()));
+
+        $span->activate();
+
+        return $span;
     }
 
     public function measure(\Closure $callback): mixed
     {
-        $span = $this->start();
-        $scope = $span->activate();
-
-        try {
-            $result = $callback($span);
-
-            // Fix: Dispatch is effective only on destruct
-            if ($result instanceof PendingDispatch) {
-                $result = null;
-            }
-
-            return $result;
-        } catch (\Throwable $exception) {
-            $span->recordException($exception);
-            throw $exception;
-        } finally {
-            $span->end();
-            $scope->detach();
-        }
+//        $span = $this->spanBuilder->startSpan();
+//        $scope = Context::storage()->attach($span->storeInContext(Context::getCurrent()));
+//
+//        try {
+//            return $callback($span);
+//        } catch (\Throwable $exception) {
+//            $span->recordException($exception);
+//            throw $exception;
+//        } finally {
+//            $scope->detach();
+//            $span->end();
+//        }
     }
 }

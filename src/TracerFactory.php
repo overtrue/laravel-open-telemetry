@@ -41,7 +41,7 @@ class TracerFactory
 
     public function create(string $name): Tracer
     {
-        $config = $this->getDriverConfig($name);
+        $config = $this->getTracerConfig($name);
         $exporter = $this->createSpanExporter($config);
         $processor = $this->createSpanProcessor($exporter, $config);
         $resource = $this->createResourceInfo($config);
@@ -69,7 +69,7 @@ class TracerFactory
         return (new Tracer($name, $traceProvider, $loggerProvider))->setWatchers($watchers);
     }
 
-    public function getDriverConfig($name): Repository
+    public function getTracerConfig($name): Repository
     {
         $default = $this->config->get('otle.global');
         $driver = $this->config->get("otle.tracers.{$name}");
@@ -124,7 +124,8 @@ class TracerFactory
         }
 
         return match (true) {
-            is_subclass_of($processor, BatchSpanProcessor::class) => (new BatchSpanProcessorBuilder($exporter))->build(),
+            is_subclass_of($processor, BatchSpanProcessor::class),
+                $processor == BatchSpanProcessor::class => (new BatchSpanProcessorBuilder($exporter))->build(),
             default => new $processor($exporter),
         };
     }

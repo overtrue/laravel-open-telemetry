@@ -67,15 +67,14 @@ class QueueWatcher implements Watcher
             $jobName = Arr::get($payload, 'displayName', 'unknown');
             $queueName = Str::after($queue ?? 'default', 'queues:');
 
-            $span = Measure::getTracer()
-                ->spanBuilder(sprintf('%s enqueue', $jobName))
+            $span = Measure::span(sprintf('%s enqueue', $jobName))
                 ->setSpanKind(SpanKind::KIND_PRODUCER)
                 ->setAttribute(TraceAttributes::MESSAGING_SYSTEM, $this->connectionDriver($connection))
                 ->setAttribute(TraceAttributes::MESSAGING_OPERATION, 'enqueue')
                 ->setAttribute(TraceAttributes::MESSAGE_ID, $uuid)
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $queueName)
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $jobName)
-                ->startSpan();
+                ->start();
 
             $context = $span->storeInContext(Context::getCurrent());
 
@@ -104,7 +103,11 @@ class QueueWatcher implements Watcher
         });
 
         app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            Measure::end();
+            $scope = Measure::activeScope();
+            $span = Measure::activeSpan();
+
+            $scope?->detach();
+            $span->end();
         });
 
         app('events')->listen(JobFailed::class, function (JobFailed $event) {
@@ -114,8 +117,8 @@ class QueueWatcher implements Watcher
             $span->recordException($event->exception)
                 ->setStatus(StatusCode::STATUS_ERROR);
 
-            $scope?->detach();
             $span->end();
+            $scope?->detach();
         });
     }
 

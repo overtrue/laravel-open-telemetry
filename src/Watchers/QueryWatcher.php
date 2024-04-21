@@ -23,9 +23,8 @@ class QueryWatcher implements Watcher
 
     public function recordQuery(QueryExecuted $query): void
     {
-        $nowInNs = (int) (microtime(true) * 1E9);
-
         $operationName = Str::upper(Str::before($query->sql, ' '));
+
         if (! in_array($operationName, ['SELECT', 'INSERT', 'UPDATE', 'DELETE'])) {
             $operationName = null;
         }
@@ -35,16 +34,15 @@ class QueryWatcher implements Watcher
             ->setStartTimestamp($this->getEventStartTimestampNs($query->time))
             ->start();
 
-        $attributes = [
+        $span->setAttributes([
             TraceAttributes::DB_SYSTEM => $query->connection->getDriverName(),
             TraceAttributes::DB_NAME => $query->connection->getDatabaseName(),
             TraceAttributes::DB_OPERATION => $operationName,
             TraceAttributes::DB_USER => $query->connection->getConfig('username'),
-        ];
+            TraceAttributes::DB_STATEMENT  => $query->sql,
+        ]);
 
-        $attributes[TraceAttributes::DB_STATEMENT] = $query->sql;
-
-        $span->setAttributes($attributes);
-        $span->end($nowInNs);
+        Measure::activeScope()?->detach();
+        $span->end();
     }
 }

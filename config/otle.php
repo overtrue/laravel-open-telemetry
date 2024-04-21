@@ -21,13 +21,12 @@ return [
          * Watchers to be registered.
          */
         'watchers' => [
-            Watchers\RequestWatcher::class,
-            Watchers\CacheWatcher::class,
-            Watchers\ExceptionWatcher::class,
-            Watchers\LogWatcher::class,
-            Watchers\QueryWatcher::class,
-            Watchers\AuthenticateWatcher::class,
-            Watchers\HttpClientRequestWatcher::class,
+//            Watchers\CacheWatcher::class,
+//            Watchers\ExceptionWatcher::class,
+//            Watchers\LogWatcher::class,
+//            Watchers\QueryWatcher::class,
+//            Watchers\AuthenticateWatcher::class,
+//            Watchers\HttpClientRequestWatcher::class,
 
             // App\Trace\Watchers\YourCustomWatcher::class, // Add your custom watcher here.
         ],

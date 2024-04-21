@@ -30,9 +30,9 @@ class RedisWatcher implements Watcher
 
     public function recordCommand(CommandExecuted $event): void
     {
-        $traceName = sprintf('redis %s %s', $event->connection->getName(), $event->command);
+        $name = sprintf('redis %s %s', $event->connection->getName(), $event->command);
 
-        $span = Measure::span($traceName)
+        $span = Measure::span($name)
             ->setSpanKind(SpanKind::KIND_CLIENT)
             ->setStartTimestamp($this->getEventStartTimestampNs($event->time))
             ->start();
@@ -43,6 +43,7 @@ class RedisWatcher implements Watcher
                 ->setAttribute(TraceAttributes::SERVER_ADDRESS, $event->connection->client()->getHost());
         }
 
+        Measure::activeScope()?->detach();
         $span->end();
     }
 

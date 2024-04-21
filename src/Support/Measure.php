@@ -26,10 +26,10 @@ class Measure
         return new SpanBuilder($this->getTracer()->spanBuilder($name));
     }
 
-    public function end(): void
+    public function end(?SpanInterface $span = null): void
     {
-        $this->activeScope()?->detach();
         $this->activeSpan()->end();
+        $this->activeScope()?->detach();
     }
 
     public function activeSpan(): SpanInterface
@@ -58,7 +58,7 @@ class Measure
 
     public function propagator()
     {
-        return $this->app->make(TextMapPropagatorInterface::class) ?? TraceContextPropagator::class;
+        return $this->app->make(TextMapPropagatorInterface::class) ?? TraceContextPropagator::getInstance();
     }
 
     public function propagationHeaders(?ContextInterface $context = null): array
