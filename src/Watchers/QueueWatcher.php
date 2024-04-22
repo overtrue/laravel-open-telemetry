@@ -13,6 +13,7 @@ use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
+use OpenTelemetry\SDK\Trace\Span;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
@@ -98,27 +99,22 @@ class QueueWatcher implements Watcher
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $event->job->getQueue())
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $event->job->resolveName())
                 ->start();
-
-            $span->activate();
         });
 
         app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            $scope = Measure::activeScope();
-            $span = Measure::activeSpan();
-
-            $scope?->detach();
+            $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
+            $span = Span::fromContext($context);
             $span->end();
         });
 
         app('events')->listen(JobFailed::class, function (JobFailed $event) {
-            $scope = Measure::activeScope();
-            $span = Measure::activeSpan();
+            $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
+            $span = Span::fromContext($context);
 
             $span->recordException($event->exception)
                 ->setStatus(StatusCode::STATUS_ERROR);
 
             $span->end();
-            $scope?->detach();
         });
     }
 

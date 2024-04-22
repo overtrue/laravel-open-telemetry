@@ -13,7 +13,6 @@ use OpenTelemetry\SDK\Logs\LoggerProviderInterface;
 use OpenTelemetry\SDK\Sdk;
 use OpenTelemetry\SDK\Trace\TracerProviderInterface;
 use OpenTelemetry\SemConv\TraceAttributes;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 class Tracer
 {

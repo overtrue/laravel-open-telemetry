@@ -43,7 +43,6 @@ class RedisWatcher implements Watcher
                 ->setAttribute(TraceAttributes::SERVER_ADDRESS, $event->connection->client()->getHost());
         }
 
-        Measure::activeScope()?->detach();
         $span->end();
     }
 

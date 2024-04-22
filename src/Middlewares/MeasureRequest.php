@@ -4,7 +4,6 @@ namespace Overtrue\LaravelOpenTelemetry\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
-use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\Context\Context;
@@ -13,13 +12,15 @@ use OpenTelemetry\Contrib\Propagation\TraceResponse\TraceResponsePropagator;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\ResponsePropagationSetter;
-use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
 use Overtrue\LaravelOpenTelemetry\TracerManager;
+use Overtrue\LaravelOpenTelemetry\Traits\InteractWithHttpHeaders;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
-class StartTracing
+class MeasureRequest
 {
+    use InteractWithHttpHeaders;
+
     /**
      * @throws \Throwable
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
@@ -28,38 +29,41 @@ class StartTracing
     {
         $name = $name ?? config('otle.default');
 
+        static::$allowedHeaders = $this->normalizeHeaders(config('otle.allowed_headers', []));
+
+        static::$sensitiveHeaders = array_merge(
+            $this->normalizeHeaders(config('otle.sensitive_headers', [])),
+            $this->defaultSensitiveHeaders
+        );
+
         /** @var \Overtrue\LaravelOpenTelemetry\Tracer $tracer */
         $tracer = app(TracerManager::class)->driver($name);
         $tracer->register(app());
-        $response = $next($request);
 
-        Measure::activeScope()?->detach();
+        $span = Measure::span(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()))
+            ->setAttributes($this->getRequestSpanAttributes($request))
+            ->start(false);
+        $context = $span->storeInContext(Context::getCurrent());
+        $scope = $context->activate();
 
-        return $response;
+        try {
+            $response = $next($request);
 
-//        $span = Measure::span(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()))
-//            ->setAttributes($this->getRequestSpanAttributes($request))
-//            ->start(false);
-//        Context::storage()->attach($span->storeInContext(Context::getCurrent()));
-//        $context = Context::getCurrent();
-//
-//        try {
-//            $response = $next($request);
-//
-//            if ($response instanceof Response) {
-//                $this->recordHttpResponseToSpan($span, $response);
-//                $this->propagateHeaderToResponse($context, $response);
-//            }
-//
-//            return $response;
-//        } catch (Throwable $exception) {
-//            $span->recordException($exception)
-//                ->setStatus(StatusCode::STATUS_ERROR);
-//
-//            throw $exception;
-//        } finally {
-//            $span->end();
-//        }
+            if ($response instanceof Response) {
+                $this->recordHttpResponseToSpan($span, $response);
+                $this->propagateHeaderToResponse($context, $response);
+            }
+
+            return $response;
+        } catch (Throwable $exception) {
+            $span->recordException($exception)
+                ->setStatus(StatusCode::STATUS_ERROR);
+
+            throw $exception;
+        } finally {
+            $span->end();
+            $scope->detach();
+        }
     }
 
     protected function recordHttpResponseToSpan(SpanInterface $span, Response $response): void
@@ -107,11 +111,11 @@ class StartTracing
         foreach ($http->headers->all() as $key => $value) {
             $key = strtolower($key);
 
-//            if (! HttpServerInstrumentation::headerIsAllowed($key)) {
-//                continue;
-//            }
-//
-//            $value = HttpServerInstrumentation::headerIsSensitive($key) ? ['*****'] : $value;
+            if (! static::headerIsAllowed($key)) {
+                continue;
+            }
+
+            $value = static::headerIsSensitive($key) ? ['*****'] : $value;
 
             $span->setAttribute($prefix.$key, $value);
         }

@@ -8,6 +8,7 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/grpc/grpc" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/laravel/pint" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/open-telemetry/transport-grpc" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/test-time" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

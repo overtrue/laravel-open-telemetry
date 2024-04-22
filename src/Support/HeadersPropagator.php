@@ -21,12 +21,10 @@ class HeadersPropagator implements PropagationGetterInterface
         return $instance ??= new self();
     }
 
-    /** @psalm-suppress MoreSpecificReturnType */
     public function keys($carrier): array
     {
         assert($carrier instanceof Request);
 
-        /** @psalm-suppress LessSpecificReturnStatement */
         return $carrier->headers->keys();
     }
 

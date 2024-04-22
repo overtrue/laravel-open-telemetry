@@ -69,31 +69,24 @@ class SpanBuilder
         return $this;
     }
 
-    public function start($attach = true): SpanInterface
+    public function start(): SpanInterface
     {
-        $span = $this->spanBuilder->startSpan();
-
-//        $span->storeInContext(Context::getCurrent());
-//        $attach && Context::storage()->attach($span->storeInContext(Context::getCurrent()));
-
-        $span->activate();
-
-        return $span;
+        return $this->spanBuilder->startSpan();
     }
 
     public function measure(\Closure $callback): mixed
     {
-//        $span = $this->spanBuilder->startSpan();
-//        $scope = Context::storage()->attach($span->storeInContext(Context::getCurrent()));
-//
-//        try {
-//            return $callback($span);
-//        } catch (\Throwable $exception) {
-//            $span->recordException($exception);
-//            throw $exception;
-//        } finally {
-//            $scope->detach();
-//            $span->end();
-//        }
+        $span = $this->spanBuilder->startSpan();
+        $scope = $span->activate();
+
+        try {
+            return $callback($span);
+        } catch (\Throwable $exception) {
+            $span->recordException($exception);
+            throw $exception;
+        } finally {
+            $scope->detach();
+            $span->end();
+        }
     }
 }

@@ -39,9 +39,8 @@ class TracerFactory
         $this->config = $this->app['config'];
     }
 
-    public function create(string $name): Tracer
+    public function create(Repository $config): Tracer
     {
-        $config = $this->getTracerConfig($name);
         $exporter = $this->createSpanExporter($config);
         $processor = $this->createSpanProcessor($exporter, $config);
         $resource = $this->createResourceInfo($config);
@@ -66,7 +65,9 @@ class TracerFactory
 
         $watchers = $config->get('watchers', $this->config->get('otle.global.watchers', []));
 
-        return (new Tracer($name, $traceProvider, $loggerProvider))->setWatchers($watchers);
+        $tracerName = $config->get('name', 'app');
+
+        return (new Tracer($tracerName, $traceProvider, $loggerProvider))->setWatchers($watchers);
     }
 
     public function getTracerConfig($name): Repository
@@ -80,8 +81,7 @@ class TracerFactory
     public function createResourceInfo(Repository $config): ResourceInfo
     {
         $attributes = array_merge([
-            ResourceAttributes::SERVICE_NAME => $this->config->get('app.name'),
-            ResourceAttributes::SERVICE_VERSION => $this->config->get('app.version'),
+            ResourceAttributes::SERVICE_NAME => $config->get('service_name'),
         ], $config->get('resource.attributes', []));
 
         return ResourceInfoFactory::emptyResource()->merge(ResourceInfo::create(Attributes::create($attributes)));
@@ -89,7 +89,16 @@ class TracerFactory
 
     public function createTransport(Repository $config): TransportInterface
     {
-        $factory = Registry::transportFactory($config->get('transport'));
+        $transport = $config->get('transport');
+
+        // eg. ['App\Trace\CustomTransport::class', ['arg1', 'arg2', ...]]
+        if (is_array($transport)) {
+            return $this->createFromCustomClass($transport, TransportInterface::class);
+        } elseif (is_string($transport)) {
+            $factory = Registry::transportFactory($transport);
+        } else {
+            throw new RuntimeException('Invalid transport type');
+        }
 
         return $factory->create(
             endpoint: $config->get('endpoint', 'php://stdout'),
@@ -107,7 +116,14 @@ class TracerFactory
 
     public function createSpanExporter(Repository $config): SpanExporterInterface
     {
-        return match ($config->get('span_exporter')) {
+        $exporter = $config->get('span_exporter');
+
+        // eg. ['App\Trace\CustomerExporter::class', ['arg1', 'arg2', ...]]
+        if (is_array($exporter)) {
+            $exporter = $this->createFromCustomClass($exporter, SpanExporterInterface::class);
+        }
+
+        return match ($exporter) {
             'otlp' => new SpanExporter($this->createTransport($config)),
             'memory' => new InMemoryExporter(),
             'console' => new ConsoleSpanExporter($this->createTransport($config)),
@@ -119,13 +135,18 @@ class TracerFactory
     {
         $processor = $config->get('span_processor');
 
+        // eg. ['App\Trace\CustomerProcessor::class', ['arg1', 'arg2', ...]]
+        if (is_array($processor)) {
+            $processor = $this->createFromCustomClass($processor, SpanProcessorInterface::class);
+        }
+
         if (! is_subclass_of($processor, SpanProcessorInterface::class)) {
             throw new RuntimeException(sprintf('The span processor must be an instance of %s.', SpanProcessorInterface::class));
         }
 
         return match (true) {
             is_subclass_of($processor, BatchSpanProcessor::class),
-                $processor == BatchSpanProcessor::class => (new BatchSpanProcessorBuilder($exporter))->build(),
+            $processor == BatchSpanProcessor::class => (new BatchSpanProcessorBuilder($exporter))->build(),
             default => new $processor($exporter),
         };
     }
@@ -134,12 +155,17 @@ class TracerFactory
     {
         $sampler = $config->get('sampler', AlwaysOnSampler::class);
 
+        // eg. ['App\Trace\CustomerSampler::class', ['arg1', 'arg2', ...]]
+        if (is_array($sampler)) {
+            $sampler = $this->createFromCustomClass($sampler, SamplerInterface::class);
+        }
+
         return new ParentBased(new $sampler);
     }
 
     protected function createLogsExporter(Repository $config): LogRecordExporterInterface
     {
-        $logsExporter = $config->get('logs.exporter', 'memory');
+        $logsExporter = $config->get('log_exporter', 'memory');
 
         return match ($logsExporter) {
             'otlp' => new LogsExporter($this->createTransport(new Repository([
@@ -149,5 +175,17 @@ class TracerFactory
             'console' => (new ConsoleExporterFactory())->create(),
             default => (new InMemoryExporterFactory())->create()
         };
+    }
+
+    public function createFromCustomClass(array $config, string $interface): object
+    {
+        // eg. ['App\Trace\CustomerSampler::class', ['arg1', 'arg2', ...]]
+        if (empty($config) || ! is_string($config[0]) || ! class_exists($config[0]) || ! is_subclass_of($config[0], $interface)) {
+            throw new RuntimeException(sprintf('The custom class must be a implementing %s.', $interface));
+        }
+
+        $className = array_shift($config);
+
+        return new $className(...$config);
     }
 }

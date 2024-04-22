@@ -39,10 +39,9 @@ class QueryWatcher implements Watcher
             TraceAttributes::DB_NAME => $query->connection->getDatabaseName(),
             TraceAttributes::DB_OPERATION => $operationName,
             TraceAttributes::DB_USER => $query->connection->getConfig('username'),
-            TraceAttributes::DB_STATEMENT  => $query->sql,
+            TraceAttributes::DB_STATEMENT => $query->sql,
         ]);
 
-        Measure::activeScope()?->detach();
         $span->end();
     }
 }
