@@ -2,7 +2,7 @@
 
 This package provides a simple way to add [OpenTelemetry](https://opentelemetry.io/) to your Laravel application.
 
-[![CI](https://github.com/overtrue/laravel-open-telemetry/workflows/CI/badge.svg)](https://github.com/overtrue/laravel-open-telemetry/actions)
+[![CI](https://github.com/overtrue/laravel-open-telemetry/workflows/Test/badge.svg)](https://github.com/overtrue/laravel-open-telemetry/actions)
 [![Latest Stable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/stable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![Latest Unstable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/unstable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![Total Downloads](https://poser.pugx.org/overtrue/laravel-open-telemetry/downloads)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
