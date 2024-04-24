@@ -126,12 +126,13 @@ return [
             'content_type' => 'application/x-protobuf',
         ],
 
-        'grpc' => [
-            'driver' => 'grpc',
-            'transport' => 'grpc',
-            'span_exporter' => 'otlp',
-            'endpoint' => env('OTLE_GRPC_ENDPOINT', 'http://localhost:4317/v1/traces'),
-            'content_type' => 'application/x-protobuf',
-        ],
+        // You should install php extension `ext-grpc` to use this driver.
+//        'grpc' => [
+//            'driver' => 'grpc',
+//            'transport' => 'grpc',
+//            'span_exporter' => 'otlp',
+//            'endpoint' => env('OTLE_GRPC_ENDPOINT', 'http://localhost:4317/v1/traces'),
+//            'content_type' => 'application/x-protobuf',
+//        ],
     ],
 ];
