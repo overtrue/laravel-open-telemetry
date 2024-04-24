@@ -15,7 +15,7 @@ This package provides a simple way to add OpenTelemetry to your Laravel applicat
 You can install the package via composer:
 
 ```bash
-composer require overtrue/laravel-opentelemetry
+composer require overtrue/laravel-open-telemetry
 ```
 
 ## Usage
