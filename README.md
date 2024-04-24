@@ -33,6 +33,8 @@ OTLE_ENABLED=true
 
 OTLE_SERVICE_NAME=your-service-name
 
+OTLE_AUTO_TRACE_REQUESTS=true
+
 OTLE_DEFAULT_TRACER=http-json
 
 OTLE_HTTP_JSON_ENDPOINT=http://localhost:4318/v1/trace
