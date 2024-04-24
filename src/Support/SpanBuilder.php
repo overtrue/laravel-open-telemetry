@@ -6,7 +6,6 @@ use Carbon\CarbonInterface;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
 
 // this file is copied from https://github.com/keepsuit/laravel-opentelemetry/blob/main/src/Support/SpanBuilder.php

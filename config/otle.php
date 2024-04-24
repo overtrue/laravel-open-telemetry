@@ -16,9 +16,9 @@ return [
     'default' => env('OTLE_DEFAULT_TRACER', 'log'),
 
     /**
-     * Auto Register the StartTracing Middleware.
+     * Auto Register the MeasureRequest middleware.
      */
-    'automatically_trace_requests' => env('OTLE_AUTO_START', true),
+    'automatically_trace_requests' => env('OTLE_AUTO_TRACE_REQUESTS', true),
 
     /**
      * Will be applied to all channels. you can override it in the channel config.
@@ -53,7 +53,7 @@ return [
             Watchers\CacheWatcher::class,
             Watchers\ExceptionWatcher::class,
             Watchers\LogWatcher::class,
-            Watchers\QueryWatcher::class,
+            Watchers\DatabaseQueryWatcher::class,
             Watchers\AuthenticateWatcher::class,
             Watchers\HttpClientRequestWatcher::class,
             // App\Trace\Watchers\YourCustomWatcher::class, // Add your custom watcher here.
@@ -64,14 +64,14 @@ return [
          * or your custom transport class by implementing `OpenTelemetry\SDK\Trace\TransportInterface` interface:
          * for example: [`App\Trace\Transports\YourCustomTransport::class`, 'arg1', 'arg2']
          */
-        'transport' => 'http',
+        'transport' => env('OTLE_DEFAULT_TRANSPORT', 'http'),
 
         /**
          * Span exporter, you can use pre-defined exporters: `memory`, `console`, `otlp`.
          * or your custom span exporter by implementing `OpenTelemetry\SDK\Trace\SpanExporterInterface` interface.
          * for example: [`App\Trace\Exporters\YourCustomExporter::class`, 'arg1', 'arg2']
          */
-        'span_exporter' => 'otlp',
+        'span_exporter' => env('OTLE_DEFAULT_SPAN_EXPORTER', 'otlp'),
 
         /**
          * Span processor, you can use your custom span processor by implementing `OpenTelemetry\SDK\Trace\SpanProcessorInterface` interface.
@@ -88,7 +88,7 @@ return [
         /**
          * Log exporter, you can use pre-defined exporters: `memory`, `console`, `otlp`.
          */
-        'log_exporter' => 'otlp',
+        'log_exporter' => env('OTLE_DEFAULT_LOG_EXPORTER', 'otlp'),
     ],
 
     /**

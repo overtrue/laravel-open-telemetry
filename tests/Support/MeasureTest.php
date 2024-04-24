@@ -3,7 +3,6 @@
 namespace Overtrue\LaravelOpenTelemetry\Tests\Support;
 
 use Mockery;
-use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
@@ -16,7 +15,6 @@ use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
 use Overtrue\LaravelOpenTelemetry\Support\StartedSpan;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
-use Overtrue\LaravelOpenTelemetry\TracerManager;
 
 class MeasureTest extends TestCase
 {

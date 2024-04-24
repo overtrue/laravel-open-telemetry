@@ -21,6 +21,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             __DIR__.'/../config/otle.php' => $this->app->configPath('otle.php'),
         ], 'config');
 
+        if (config('otle.enabled') === false) {
+            return;
+        }
+
         $this->injectLogConfig();
 
         if (config('otle.automatically_trace_requests')) {
@@ -33,6 +37,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__.'/../config/otle.php', 'otle',
         );
+
+        if (config('otle.enabled') === false) {
+            return;
+        }
 
         ClockFactory::setDefault(new CarbonClock());
 

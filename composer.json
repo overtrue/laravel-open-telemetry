@@ -1,5 +1,6 @@
 {
     "name": "overtrue/laravel-open-telemetry",
+    "description": "This package provides a simple way to add OpenTelemetry to your Laravel application.",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -14,6 +15,7 @@
         }
     ],
     "require": {
+        "php": "8.2",
         "open-telemetry/sdk": "*",
         "open-telemetry/exporter-otlp": "*",
         "open-telemetry/transport-grpc": "^1.0"

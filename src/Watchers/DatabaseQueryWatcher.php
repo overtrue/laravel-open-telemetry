@@ -12,7 +12,7 @@ use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
 
-class QueryWatcher implements Watcher
+class DatabaseQueryWatcher implements Watcher
 {
     use InteractWithEventTimestamp;
 
