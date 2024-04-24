@@ -30,10 +30,15 @@ php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemet
 
 ```dotenv
 OTLE_ENABLED=true
+
 OTLE_SERVICE_NAME=your-service-name
+
 OTLE_DEFAULT_TRACER=http-json
+
 OTLE_HTTP_JSON_ENDPOINT=http://localhost:4318/v1/trace
+
 OTLE_HTTP_BINARY_ENDPOINT=http://localhost:4318/v1/trace
+
 OTLE_GRPC_ENDPOINT=http://localhost:4317/v1/trace
 //... 
 ```
