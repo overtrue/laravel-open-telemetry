@@ -28,7 +28,7 @@ php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemet
 
 ### Update the environment variables
 
-```bash
+```dotenv
 OTLE_ENABLED=true
 OTLE_SERVICE_NAME=your-service-name
 OTLE_DEFAULT_TRACER=http-json
