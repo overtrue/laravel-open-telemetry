@@ -124,6 +124,10 @@ class MeasureRequest
 
             $value = static::headerIsSensitive($key) ? ['*****'] : $value;
 
+            if (is_array($value)) {
+                $value = implode(', ', $value);
+            }
+
             $span->setAttribute($prefix.$key, $value);
         }
 
