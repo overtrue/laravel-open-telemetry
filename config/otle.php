@@ -21,6 +21,31 @@ return [
     'automatically_trace_requests' => env('OTLE_AUTO_TRACE_REQUESTS', true),
 
     /**
+     * Allow to trace requests with specific headers. You can use `*` as wildcard.
+     */
+    'allowed_headers' => [
+        'referer',
+        'x-*',
+        'accept',
+        'request-id',
+    ],
+
+    /**
+     * Sensitive headers will be marked as *** from the span attributes. You can use `*` as wildcard.
+     */
+    'sensitive_headers' => [
+        // 'cookie',
+        // 'authorization',
+        // ...
+    ],
+
+    /**
+     * The name of the header that will be used to pass the trace id in the response.
+     * if set to `null`, the header will not be added to the response.
+     */
+    'response_trace_header_name' => env('OTLE_RESPONSE_TRACE_HEADER_NAME', 'X-Trace-Id'),
+
+    /**
      * Will be applied to all channels. you can override it in the channel config.
      */
     'global' => [

@@ -49,9 +49,16 @@ class MeasureRequest
         try {
             $response = $next($request);
 
+            $this->recordHeaders($span, $request);
+
             if ($response instanceof Response) {
                 $this->recordHttpResponseToSpan($span, $response);
                 $this->propagateHeaderToResponse($context, $response);
+            }
+
+            // Add trace id to response header if configured.
+            if ($traceIdHeaderName = config('otle.response_trace_header_name')) {
+                $response->headers->set($traceIdHeaderName, Measure::traceId());
             }
 
             return $response;
@@ -135,7 +142,7 @@ class MeasureRequest
         return '';
     }
 
-    public function getRequestSpanAttributes(Request $request)
+    public function getRequestSpanAttributes(Request $request): array
     {
         return [
             TraceAttributes::URL_FULL => $request->fullUrl(),

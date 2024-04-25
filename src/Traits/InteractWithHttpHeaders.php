@@ -3,6 +3,7 @@
 namespace Overtrue\LaravelOpenTelemetry\Traits;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 trait InteractWithHttpHeaders
 {
@@ -35,7 +36,7 @@ trait InteractWithHttpHeaders
 
     public static function headerIsAllowed(string $header): bool
     {
-        return in_array($header, static::getAllowedHeaders());
+        return Str::is(static::getAllowedHeaders(), $header);
     }
 
     /**
@@ -48,7 +49,7 @@ trait InteractWithHttpHeaders
 
     public static function headerIsSensitive(string $header): bool
     {
-        return in_array($header, static::getSensitiveHeaders());
+        return Str::is(static::getSensitiveHeaders(), $header);
     }
 
     protected function normalizeHeaders(array $headers): array
