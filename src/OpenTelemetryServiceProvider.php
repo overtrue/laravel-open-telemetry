@@ -7,11 +7,14 @@ namespace Overtrue\LaravelOpenTelemetry;
 use Illuminate\Config\Repository;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\ServiceProvider;
+use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\SDK\Common\Time\ClockFactory;
 use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
 use Overtrue\LaravelOpenTelemetry\Support\CarbonClock;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\OpenTelemetryMonologHandler;
+use Overtrue\LaravelOpenTelemetry\Watchers\CommandWatcher;
+use Overtrue\LaravelOpenTelemetry\Watchers\ScheduledTaskWatcher;
 
 class OpenTelemetryServiceProvider extends ServiceProvider
 {
@@ -29,6 +32,28 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
         if (config('otle.automatically_trace_requests')) {
             $this->injectHttpMiddleware(app(Kernel::class));
+        }
+
+        if ($this->app->runningInConsole() && config('otle.automatically_trace_cli')) {
+            $tracer = $this->app->make(TracerManager::class)->driver(config('otle.default'));
+            $tracer->register($this->app);
+
+            foreach ([
+                CommandWatcher::class,
+                ScheduledTaskWatcher::class,
+            ] as $watcher) {
+                $this->app->make($watcher)->register($this->app);
+            }
+
+            $span = Facades\Measure::span('artisan')
+                ->setSpanKind(SpanKind::KIND_SERVER)
+                ->start();
+            $scope = $span->activate();
+
+            $this->app->terminating(function () use ($span, $scope) {
+                $span->end();
+                $scope->detach();
+            });
         }
     }
 

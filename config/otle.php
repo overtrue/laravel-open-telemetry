@@ -21,6 +21,11 @@ return [
     'automatically_trace_requests' => env('OTLE_AUTO_TRACE_REQUESTS', true),
 
     /**
+     * Auto start console tracer
+     */
+    'automatically_trace_cli' => env('OTLE_AUTO_TRACE_CLI', true),
+
+    /**
      * Allow to trace requests with specific headers. You can use `*` as wildcard.
      */
     'allowed_headers' => [

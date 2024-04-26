@@ -42,7 +42,7 @@ class MeasureRequest
 
         $span = Measure::span(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()))
             ->setAttributes($this->getRequestSpanAttributes($request))
-            ->start(false);
+            ->start();
         $context = $span->storeInContext(Context::getCurrent());
         $scope = $context->activate();
 

@@ -21,7 +21,7 @@ class EventWatcher implements Watcher
             return;
         }
 
-        Measure::activeSpan()->addEvent(sprintf('[EVENT] %s fired', $event), [
+        Measure::activeSpan()->addEvent(sprintf('[Event] %s fired', $event), [
             'event.name' => $event,
         ]);
     }
