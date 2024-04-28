@@ -18,10 +18,15 @@ use Overtrue\LaravelOpenTelemetry\Watchers\ScheduledTaskWatcher;
 
 class OpenTelemetryServiceProvider extends ServiceProvider
 {
+    protected array $consoleWatchers = [
+        CommandWatcher::class,
+        ScheduledTaskWatcher::class,
+    ];
+
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/../config/otle.php' => $this->app->configPath('otle.php'),
+            __DIR__ . '/../config/otle.php' => $this->app->configPath('otle.php'),
         ], 'config');
 
         if (config('otle.enabled') === false) {
@@ -35,32 +40,14 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole() && config('otle.automatically_trace_cli')) {
-            $tracer = $this->app->make(TracerManager::class)->driver(config('otle.default'));
-            $tracer->register($this->app);
-
-            foreach ([
-                CommandWatcher::class,
-                ScheduledTaskWatcher::class,
-            ] as $watcher) {
-                $this->app->make($watcher)->register($this->app);
-            }
-
-            $span = Facades\Measure::span('artisan')
-                ->setSpanKind(SpanKind::KIND_SERVER)
-                ->start();
-            $scope = $span->activate();
-
-            $this->app->terminating(function () use ($span, $scope) {
-                $span->end();
-                $scope->detach();
-            });
+            $this->startMeasureConsole();
         }
     }
 
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/otle.php', 'otle',
+            __DIR__ . '/../config/otle.php', 'otle',
         );
 
         if (config('otle.enabled') === false) {
@@ -99,12 +86,32 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
     protected function injectHttpMiddleware(Kernel $kernel): void
     {
-        if (! $kernel instanceof \Illuminate\Foundation\Http\Kernel) {
+        if (!$kernel instanceof \Illuminate\Foundation\Http\Kernel) {
             return;
         }
 
-        if (! $kernel->hasMiddleware(MeasureRequest::class)) {
+        if (!$kernel->hasMiddleware(MeasureRequest::class)) {
             $kernel->prependMiddleware(MeasureRequest::class);
         }
+    }
+
+    public function startMeasureConsole(): void
+    {
+        $tracer = $this->app->make(TracerManager::class)->driver(config('otle.default'));
+        $tracer->register($this->app);
+
+        foreach ($this->consoleWatchers as $watcher) {
+            $this->app->make($watcher)->register($this->app);
+        }
+
+        $span = Facades\Measure::span('artisan')
+            ->setSpanKind(SpanKind::KIND_SERVER)
+            ->start();
+        $scope = $span->activate();
+
+        $this->app->terminating(function () use ($span, $scope) {
+            $span->end();
+            $scope->detach();
+        });
     }
 }
