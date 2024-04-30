@@ -8,6 +8,7 @@ use Illuminate\Config\Repository;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\ServiceProvider;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SDK\Common\Time\ClockFactory;
 use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
 use Overtrue\LaravelOpenTelemetry\Support\CarbonClock;
@@ -38,10 +39,6 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         if (config('otle.automatically_trace_requests')) {
             $this->injectHttpMiddleware(app(Kernel::class));
         }
-
-        if ($this->app->runningInConsole() && config('otle.automatically_trace_cli')) {
-            $this->startMeasureConsole();
-        }
     }
 
     public function register(): void
@@ -67,6 +64,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->app->singleton(TracerManager::class, function ($app) {
             return new TracerManager($app);
         });
+
+        if ($this->app->runningInConsole() && config('otle.automatically_trace_cli')) {
+            $this->startMeasureConsole();
+        }
     }
 
     protected function injectLogConfig(): void
@@ -107,6 +108,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $span = Facades\Measure::span('artisan')
             ->setSpanKind(SpanKind::KIND_SERVER)
             ->start();
+        $span->storeInContext(Context::getCurrent());
         $scope = $span->activate();
 
         $this->app->terminating(function () use ($span, $scope) {

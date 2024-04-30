@@ -16,6 +16,8 @@ class CommandWatcher implements Watcher
     public function register(Application $app): void
     {
         $app['events']->listen(CommandStarting::class, function (CommandStarting $event) {
+            Measure::activeSpan()->updateName('[Command] '.$event->command);
+
             $this->span = Measure::span('[Command] '.$event->command)
                 ->setAttributes([
                     'command' => $event->command,

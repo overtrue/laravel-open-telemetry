@@ -18,6 +18,8 @@ class ScheduledTaskWatcher implements Watcher
     public function register(Application $app): void
     {
         $app['events']->listen(ScheduledTaskStarting::class, function (ScheduledTaskStarting $event) {
+            Measure::activeSpan()->updateName('[Schedule] '.$event->task->getSummaryForDisplay());
+
             $this->span = Measure::span('[Schedule] '.$event->task->getSummaryForDisplay())
                 ->setAttributes([
                     'task.command' => $event->task->command,
