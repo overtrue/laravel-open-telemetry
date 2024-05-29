@@ -68,7 +68,7 @@ class RedisWatcher implements Watcher
     protected function registerRedisEvents(mixed $redis): void
     {
         if ($redis instanceof RedisManager) {
-            foreach ($redis->connections() as $connection) {
+            foreach ($redis->connections() ?? [] as $connection) {
                 $connection->setEventDispatcher(app('events'));
             }
 

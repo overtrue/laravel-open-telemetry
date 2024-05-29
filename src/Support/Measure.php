@@ -3,6 +3,7 @@
 namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Illuminate\Contracts\Foundation\Application;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
@@ -65,7 +66,7 @@ class Measure
 
     public function tracer()
     {
-        return $this->app->get(TracerInterface::class);
+        return Globals::tracerProvider()->getTracer(config('app.name'));
     }
 
     public function activeSpan(): SpanInterface

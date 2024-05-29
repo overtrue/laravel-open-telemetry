@@ -17,7 +17,8 @@
     "require": {
         "php": ">=8.2",
         "open-telemetry/sdk": "*",
-        "open-telemetry/exporter-otlp": "*"
+        "open-telemetry/exporter-otlp": "*",
+        "ext-opentelemetry": "*"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0",

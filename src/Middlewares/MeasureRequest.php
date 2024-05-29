@@ -27,8 +27,6 @@ class MeasureRequest
      */
     public function handle(Request $request, Closure $next, ?string $name = null)
     {
-        $name = $name ?? config('otle.default');
-
         static::$allowedHeaders = $this->normalizeHeaders(config('otle.allowed_headers', []));
 
         static::$sensitiveHeaders = array_merge(
@@ -36,15 +34,9 @@ class MeasureRequest
             $this->defaultSensitiveHeaders
         );
 
-        /** @var \Overtrue\LaravelOpenTelemetry\Tracer $tracer */
-        $tracer = app(TracerManager::class)->driver($name);
-        $tracer->register(app());
-
-        $span = Measure::span(sprintf('%s:%s', $request?->method() ?? 'unknown', $request->url()))
-            ->setAttributes($this->getRequestSpanAttributes($request))
-            ->start();
-        $context = $span->storeInContext(Context::getCurrent());
-        $scope = $context->activate();
+        $span = Measure::activeSpan()->setAttributes($this->getRequestSpanAttributes($request));
+        $scope = Measure::activeScope();
+        $context = Context::getCurrent();
 
         try {
             $response = $next($request);
@@ -67,9 +59,6 @@ class MeasureRequest
                 ->setStatus(StatusCode::STATUS_ERROR);
 
             throw $exception;
-        } finally {
-            $span->end();
-            $scope->detach();
         }
     }
 
