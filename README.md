@@ -30,19 +30,14 @@ php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemet
 
 ```dotenv
 OTLE_ENABLED=true
-
-OTLE_SERVICE_NAME=your-service-name
-
 OTLE_AUTO_TRACE_REQUESTS=true
-
-OTLE_DEFAULT_TRACER=http-json
-
-OTLE_HTTP_JSON_ENDPOINT=http://localhost:4318/v1/trace
-
-OTLE_HTTP_BINARY_ENDPOINT=http://localhost:4318/v1/trace
-
-OTLE_GRPC_ENDPOINT=http://localhost:4317/v1/trace
-//... 
+OTEL_PHP_AUTOLOAD_ENABLED=true
+OTEL_PHP_TRACE_CLI_ENABLED=true
+OTEL_SERVICE_NAME=my-app
+OTEL_TRACES_EXPORTER=otlp
+#OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
+OTEL_PROPAGATORS=baggage,tracecontext
 ```
 and other environment variables, you can find them in the configuration file: `config/otle.php`.
 
@@ -58,19 +53,6 @@ protected $middleware = [
 ```
 
 or you can set the env variable `OTLE_AUTO_TRACE_REQUESTS` to `true` to enable it automatically.
-
-### Watchers
-
-This package provides some watchers to help you trace your application:
-
-- `Overtrue\LaravelOpenTelemetry\Watchers\DatabaseQueryWatcher` to trace database queries.
-- `Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher` to trace cache operations.
-- `Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher` to trace job execution.
-- `Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher` to trace redis operations.
-- `Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher` to trace http client requests.
-- `Overtrue\LaravelOpenTelemetry\Watchers\LogWatcher` to trace log operations.
-
-You can enable or disable them in the configuration file: `config/otle.php`.
 
 ### Custom span
 

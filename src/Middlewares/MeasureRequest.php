@@ -12,7 +12,6 @@ use OpenTelemetry\Contrib\Propagation\TraceResponse\TraceResponsePropagator;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\ResponsePropagationSetter;
-use Overtrue\LaravelOpenTelemetry\TracerManager;
 use Overtrue\LaravelOpenTelemetry\Traits\InteractWithHttpHeaders;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;

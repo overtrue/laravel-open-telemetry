@@ -8,7 +8,6 @@ use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;

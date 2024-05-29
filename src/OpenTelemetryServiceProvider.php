@@ -4,19 +4,10 @@ declare(strict_types=1);
 
 namespace Overtrue\LaravelOpenTelemetry;
 
-use Illuminate\Config\Repository;
 use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
-use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Context\Context;
-use OpenTelemetry\SDK\Common\Time\ClockFactory;
 use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
-use Overtrue\LaravelOpenTelemetry\Support\CarbonClock;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\OpenTelemetryMonologHandler;
-use Overtrue\LaravelOpenTelemetry\Watchers\CommandWatcher;
-use Overtrue\LaravelOpenTelemetry\Watchers\ScheduledTaskWatcher;
 
 class OpenTelemetryServiceProvider extends ServiceProvider
 {
