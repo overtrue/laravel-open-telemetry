@@ -29,8 +29,8 @@ php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemet
 ### Update the environment variables
 
 ```dotenv
-OTLE_ENABLED=true
-OTLE_AUTO_TRACE_REQUESTS=true
+OTEL_ENABLED=true
+OTEL_AUTO_TRACE_REQUESTS=true
 OTEL_PHP_AUTOLOAD_ENABLED=true
 OTEL_PHP_TRACE_CLI_ENABLED=true
 OTEL_SERVICE_NAME=my-app
@@ -52,7 +52,7 @@ protected $middleware = [
 ];
 ```
 
-or you can set the env variable `OTLE_AUTO_TRACE_REQUESTS` to `true` to enable it automatically.
+or you can set the env variable `OTEL_AUTO_TRACE_REQUESTS` to `true` to enable it automatically.
 
 ### Custom span
 

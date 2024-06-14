@@ -26,15 +26,14 @@ class MeasureRequest
      */
     public function handle(Request $request, Closure $next, ?string $name = null)
     {
-        static::$allowedHeaders = $this->normalizeHeaders(config('otle.allowed_headers', []));
+        static::$allowedHeaders = $this->normalizeHeaders(config('otel.allowed_headers', []));
 
         static::$sensitiveHeaders = array_merge(
-            $this->normalizeHeaders(config('otle.sensitive_headers', [])),
+            $this->normalizeHeaders(config('otel.sensitive_headers', [])),
             $this->defaultSensitiveHeaders
         );
 
         $span = Measure::activeSpan()->setAttributes($this->getRequestSpanAttributes($request));
-        $scope = Measure::activeScope();
         $context = Context::getCurrent();
 
         try {
@@ -48,7 +47,7 @@ class MeasureRequest
             }
 
             // Add trace id to response header if configured.
-            if ($traceIdHeaderName = config('otle.response_trace_header_name')) {
+            if ($traceIdHeaderName = config('otel.response_trace_header_name')) {
                 $response->headers->set($traceIdHeaderName, Measure::traceId());
             }
 

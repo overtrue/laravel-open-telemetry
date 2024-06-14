@@ -14,18 +14,18 @@ class OpenTelemetryServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__.'/../config/otle.php' => $this->app->configPath('otle.php'),
+            __DIR__.'/../config/otel.php' => $this->app->configPath('otel.php'),
         ], 'config');
 
-        if (config('otle.enabled') === false) {
+        if (config('otel.enabled') === false) {
             return;
         }
 
-        if (config('otle.automatically_trace_requests')) {
+        if (config('otel.automatically_trace_requests')) {
             $this->injectHttpMiddleware(app(Kernel::class));
         }
 
-        foreach (config('otle.watchers') as $watcher) {
+        foreach (config('otel.watchers') as $watcher) {
             $this->app->make($watcher)->register($this->app);
         }
     }
@@ -33,10 +33,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/otle.php', 'otle',
+            __DIR__.'/../config/otel.php', 'otel',
         );
 
-        if (config('otle.enabled') === false) {
+        if (config('otel.enabled') === false) {
             return;
         }
 

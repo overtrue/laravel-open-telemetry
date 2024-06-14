@@ -4,12 +4,12 @@ namespace Overtrue\LaravelOpenTelemetry\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
 use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
 use Overtrue\LaravelOpenTelemetry\Support\StartedSpan;
-use Overtrue\LaravelOpenTelemetry\Tracer;
 
 /**
  * @method static SpanBuilder span(string $name)
@@ -18,7 +18,7 @@ use Overtrue\LaravelOpenTelemetry\Tracer;
  * @method static SpanInterface activeSpan()
  * @method static ScopeInterface|null activeScope()
  * @method static string traceId()
- * @method static Tracer tracer()
+ * @method static TracerInterface tracer()
  * @method static TextMapPropagatorInterface propagator()
  * @method static array propagationHeaders(?ContextInterface $context = null)
  * @method static ContextInterface extractContextFromPropagationHeaders(array $headers)
