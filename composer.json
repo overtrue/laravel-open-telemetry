@@ -18,7 +18,8 @@
         "php": ">=8.2",
         "open-telemetry/sdk": "*",
         "open-telemetry/exporter-otlp": "*",
-        "ext-opentelemetry": "*"
+        "ext-opentelemetry": "*",
+        "open-telemetry/opentelemetry-auto-laravel": "^0.0.25"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0",
