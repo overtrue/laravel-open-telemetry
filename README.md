@@ -28,6 +28,8 @@ php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemet
 
 ### Update the environment variables
 
+> You can refer to [OpenTelemetry SDK Configuration Instructions](https://opentelemetry.io/docs/languages/sdk-configuration/general)
+
 ```dotenv
 OTEL_ENABLED=true
 OTEL_AUTO_TRACE_REQUESTS=true
