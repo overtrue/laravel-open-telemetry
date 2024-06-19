@@ -148,10 +148,11 @@
       <path value="$PROJECT_DIR$/vendor/open-telemetry/gen-otlp-protobuf" />
       <path value="$PROJECT_DIR$/vendor/open-telemetry/exporter-otlp" />
       <path value="$PROJECT_DIR$/vendor/google/protobuf" />
-      <path value="$PROJECT_DIR$/vendor/grpc/grpc" />
-      <path value="$PROJECT_DIR$/vendor/open-telemetry/transport-grpc" />
       <path value="$PROJECT_DIR$/vendor/laravel/pint" />
       <path value="$PROJECT_DIR$/vendor/spatie/test-time" />
+      <path value="$PROJECT_DIR$/vendor/filp/whoops" />
+      <path value="$PROJECT_DIR$/vendor/open-telemetry/opentelemetry-auto-laravel" />
+      <path value="$PROJECT_DIR$/vendor/nunomaduro/collision" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2">

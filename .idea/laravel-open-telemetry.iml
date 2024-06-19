@@ -5,10 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" packagePrefix="Overtrue\LaravelOpenTelemetry\" />
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" packagePrefix="Overtrue\LaravelOpenTelemetry\Tests\" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/grpc/grpc" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/laravel/pint" />
-      <excludeFolder url="file://$MODULE_DIR$/vendor/open-telemetry/transport-grpc" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/test-time" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/filp/whoops" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/nunomaduro/collision" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/open-telemetry/opentelemetry-auto-laravel" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

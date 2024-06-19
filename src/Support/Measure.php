@@ -5,16 +5,12 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use OpenTelemetry\API\Globals;
-use OpenTelemetry\API\Trace\Propagation\TraceContextPropagator;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
-use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
-use OpenTelemetry\SDK\Propagation\PropagatorFactory;
-use OpenTelemetry\SDK\Registry;
 
 class Measure
 {
@@ -90,7 +86,7 @@ class Measure
 
     public function propagator()
     {
-        return (new PropagatorFactory())->create();
+        return Globals::propagator();
     }
 
     public function propagationHeaders(?ContextInterface $context = null): array

@@ -1,6 +1,5 @@
 <?php
 
-use OpenTelemetry\SemConv\ResourceAttributes;
 use Overtrue\LaravelOpenTelemetry\Watchers;
 
 return [

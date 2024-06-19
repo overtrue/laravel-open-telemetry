@@ -6,12 +6,8 @@ use Closure;
 use Illuminate\Http\Request;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
-use OpenTelemetry\Context\Context;
-use OpenTelemetry\Contrib\Propagation\ServerTiming\ServerTimingPropagator;
-use OpenTelemetry\Contrib\Propagation\TraceResponse\TraceResponsePropagator;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\ResponsePropagationSetter;
 use Overtrue\LaravelOpenTelemetry\Traits\InteractWithHttpHeaders;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -34,17 +30,11 @@ class MeasureRequest
         );
 
         $span = Measure::activeSpan()->setAttributes($this->getRequestSpanAttributes($request));
-        $context = Context::getCurrent();
 
         try {
             $response = $next($request);
 
             $this->recordHeaders($span, $request);
-
-            if ($response instanceof Response) {
-                $this->recordHttpResponseToSpan($span, $response);
-                $this->propagateHeaderToResponse($context, $response);
-            }
 
             // Add trace id to response header if configured.
             if ($traceIdHeaderName = config('otel.response_trace_header_name')) {
@@ -57,41 +47,6 @@ class MeasureRequest
                 ->setStatus(StatusCode::STATUS_ERROR);
 
             throw $exception;
-        }
-    }
-
-    protected function recordHttpResponseToSpan(SpanInterface $span, Response $response): void
-    {
-        $span->setAttribute(TraceAttributes::NETWORK_PROTOCOL_VERSION, $response->getProtocolVersion());
-        $span->setAttribute(TraceAttributes::HTTP_RESPONSE_STATUS_CODE, $response->getStatusCode());
-
-        if (($content = $response->getContent()) !== false) {
-            $span->setAttribute(TraceAttributes::HTTP_RESPONSE_BODY_SIZE, strlen($content));
-        }
-
-        $this->recordHeaders($span, $response);
-
-        if ($response->isSuccessful()) {
-            $span->setStatus(StatusCode::STATUS_OK);
-        }
-
-        if ($response->isServerError() || $response->isClientError()) {
-            $span->setStatus(StatusCode::STATUS_ERROR);
-        }
-    }
-
-    protected function propagateHeaderToResponse($context, Response $response): void
-    {
-        // Propagate `server-timing` header to response, if ServerTimingPropagator is present
-        if (class_exists('OpenTelemetry\Contrib\Propagation\ServerTiming\ServerTimingPropagator')) {
-            $prop = new ServerTimingPropagator();
-            $prop->inject($response, ResponsePropagationSetter::instance(), $context);
-        }
-
-        // Propagate `traceresponse` header to response, if TraceResponsePropagator is present
-        if (class_exists('OpenTelemetry\Contrib\Propagation\TraceResponse\TraceResponsePropagator')) {
-            $prop = new TraceResponsePropagator();
-            $prop->inject($response, ResponsePropagationSetter::instance(), $context);
         }
     }
 
