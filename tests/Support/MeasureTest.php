@@ -3,10 +3,12 @@
 namespace Overtrue\LaravelOpenTelemetry\Tests\Support;
 
 use Mockery;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
+use OpenTelemetry\Context\ContextKeys;
 use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
 use OpenTelemetry\SDK\Trace\RandomIdGenerator;
@@ -105,9 +107,7 @@ class MeasureTest extends TestCase
 
     public function testGetPropagator()
     {
-        $instance = Mockery::mock(TextMapPropagatorInterface::class);
-        $this->instance(TextMapPropagatorInterface::class, $instance);
-        $this->assertSame($instance, Measure::propagator());
+        $this->assertSame(Globals::propagator(), Measure::propagator());
     }
 
     public function testPropagationHeaders()
