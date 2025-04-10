@@ -50,31 +50,7 @@ class MeasureRequest
         }
     }
 
-    protected function recordHeaders(SpanInterface $span, Request|Response $http): SpanInterface
-    {
-        $prefix = match (true) {
-            $http instanceof Request => 'http.request.header.',
-            $http instanceof Response => 'http.response.header.',
-        };
 
-        foreach ($http->headers->all() as $key => $value) {
-            $key = strtolower($key);
-
-            if (! static::headerIsAllowed($key)) {
-                continue;
-            }
-
-            $value = static::headerIsSensitive($key) ? ['*****'] : $value;
-
-            if (is_array($value)) {
-                $value = implode(', ', $value);
-            }
-
-            $span->setAttribute($prefix.$key, $value);
-        }
-
-        return $span;
-    }
 
     protected static function httpHostName(Request $request): string
     {
@@ -103,7 +79,6 @@ class MeasureRequest
             TraceAttributes::SERVER_PORT => $request->getPort(),
             TraceAttributes::CLIENT_PORT => $request->server('REMOTE_PORT'),
             TraceAttributes::USER_AGENT_ORIGINAL => $request->userAgent(),
-            TraceAttributes::HTTP_FLAVOR => $request->server('SERVER_PROTOCOL'),
         ];
     }
 }

@@ -8,8 +8,10 @@ use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
+use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
 
 class Measure
@@ -62,7 +64,7 @@ class Measure
         }
     }
 
-    public function tracer()
+    public function tracer(): TracerInterface
     {
         return Globals::tracerProvider()->getTracer(config('app.name'));
     }
@@ -84,7 +86,7 @@ class Measure
         return SpanContextValidator::isValidTraceId($traceId) ? $traceId : null;
     }
 
-    public function propagator()
+    public function propagator(): TextMapPropagatorInterface
     {
         return Globals::propagator();
     }
