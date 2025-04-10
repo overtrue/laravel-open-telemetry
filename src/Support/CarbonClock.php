@@ -5,16 +5,16 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use OpenTelemetry\SDK\Common\Time\ClockInterface;
-use OpenTelemetry\SDK\Common\Time\SystemClock;
+use OpenTelemetry\API\Common\Time\Clock;
+use OpenTelemetry\API\Common\Time\ClockInterface;
 
 class CarbonClock implements ClockInterface
 {
-    protected SystemClock $systemClock;
+    protected ClockInterface $systemClock;
 
     public function __construct()
     {
-        $this->systemClock = new SystemClock();
+        $this->systemClock = Clock::getDefault();
     }
 
     public function now(): int
