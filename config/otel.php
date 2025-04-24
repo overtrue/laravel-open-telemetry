@@ -16,7 +16,7 @@ return [
     /**
      * Allow to trace requests with specific headers. You can use `*` as wildcard.
      */
-    'allowed_headers' => explode(',', env('OTEL_ALLOWED_HEADERS', join(',', [
+    'allowed_headers' => explode(',', env('OTEL_ALLOWED_HEADERS', implode(',', [
         'referer',
         'x-*',
         'accept',
@@ -26,7 +26,7 @@ return [
     /**
      * Sensitive headers will be marked as *** from the span attributes. You can use `*` as wildcard.
      */
-    'sensitive_headers' => explode(',', env('OTEL_SENSITIVE_HEADERS', join(',', [
+    'sensitive_headers' => explode(',', env('OTEL_SENSITIVE_HEADERS', implode(',', [
         // 'cookie',
         // 'authorization',
     ]))),
@@ -34,7 +34,7 @@ return [
     /**
      * Ignore paths will not be traced. You can use `*` as wildcard.
      */
-    'ignore_paths' => explode(',', env('OTEL_IGNORE_PATHS', join(',', [
+    'ignore_paths' => explode(',', env('OTEL_IGNORE_PATHS', implode(',', [
         // 'api/*',
         // 'webhook/*',
     ]))),
