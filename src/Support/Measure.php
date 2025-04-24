@@ -26,8 +26,12 @@ class Measure
         $app->terminating($this->flush(...));
     }
 
-    public function span(string $name): SpanBuilder
+    public function span(string $name, ?string $prefix = null): SpanBuilder
     {
+        if ($prefix) {
+            $name = sprintf('[%s] %s', $prefix, $name);
+        }
+
         return new SpanBuilder($this->tracer()->spanBuilder($name));
     }
 

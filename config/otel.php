@@ -33,6 +33,14 @@ return [
     ],
 
     /**
+     * Ignore routes will not be traced. You can use `*` as wildcard.
+     */
+    'ignore_routes' => [
+        // 'api/*',
+        // 'webhook/*',
+    ],
+
+    /**
      * The name of the header that will be used to pass the trace id in the response.
      * if set to `null`, the header will not be added to the response.
      */

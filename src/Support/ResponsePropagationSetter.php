@@ -18,7 +18,7 @@ class ResponsePropagationSetter implements PropagationSetterInterface
     {
         static $instance;
 
-        return $instance ??= new self();
+        return $instance ??= new self;
     }
 
     public function set(&$carrier, string $key, string $value): void

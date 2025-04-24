@@ -68,11 +68,11 @@ class QueueWatcher implements Watcher
             $jobName = Arr::get($payload, 'displayName', 'unknown');
             $queueName = Str::after($queue ?? 'default', 'queues:');
 
-            $span = Measure::span(sprintf('%s enqueue', $jobName))
+            $span = Measure::span(sprintf('[Job] %s enqueue', $jobName))
                 ->setSpanKind(SpanKind::KIND_PRODUCER)
                 ->setAttribute(TraceAttributes::MESSAGING_SYSTEM, $this->connectionDriver($connection))
-                ->setAttribute(TraceAttributes::MESSAGING_OPERATION, 'enqueue')
-                ->setAttribute(TraceAttributes::MESSAGE_ID, $uuid)
+                ->setAttribute(TraceAttributes::MESSAGING_OPERATION_TYPE, 'enqueue')
+                ->setAttribute(TraceAttributes::MESSAGING_MESSAGE_ID, $uuid)
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $queueName)
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $jobName)
                 ->start();
@@ -90,12 +90,12 @@ class QueueWatcher implements Watcher
         app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
             $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
 
-            $span = Measure::span(sprintf('%s process', $event->job->resolveName()))
+            $span = Measure::span(sprintf('[Job] %s process', $event->job->resolveName()))
                 ->setSpanKind(SpanKind::KIND_CONSUMER)
                 ->setParent($context)
                 ->setAttribute(TraceAttributes::MESSAGING_SYSTEM, $this->connectionDriver($event->connectionName))
-                ->setAttribute(TraceAttributes::MESSAGING_OPERATION, 'process')
-                ->setAttribute(TraceAttributes::MESSAGE_ID, $event->job->uuid())
+                ->setAttribute(TraceAttributes::MESSAGING_OPERATION_TYPE, 'process')
+                ->setAttribute(TraceAttributes::MESSAGING_MESSAGE_ID, $event->job->uuid())
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $event->job->getQueue())
                 ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $event->job->resolveName())
                 ->start();

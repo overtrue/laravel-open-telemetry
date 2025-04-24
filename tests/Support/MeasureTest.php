@@ -18,7 +18,7 @@ use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
 
 class MeasureTest extends TestCase
 {
-    public function testNewSpanBuilder()
+    public function test_new_span_builder()
     {
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
         $mockBuilder = Mockery::mock(SpanBuilderInterface::class);
@@ -33,7 +33,7 @@ class MeasureTest extends TestCase
         );
     }
 
-    public function testStartSpan()
+    public function test_start_span()
     {
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
         $mockBuilder = Mockery::mock(SpanBuilder::class);
@@ -52,7 +52,7 @@ class MeasureTest extends TestCase
         );
     }
 
-    public function testEndSpan()
+    public function test_end_span()
     {
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
         $mockBuilder = Mockery::mock(SpanBuilder::class);
@@ -72,7 +72,7 @@ class MeasureTest extends TestCase
         Measure::end();
     }
 
-    public function testGetTracer()
+    public function test_get_tracer()
     {
         $this->app->instance(TracerInterface::class, Mockery::mock(TracerInterface::class));
 
@@ -82,19 +82,19 @@ class MeasureTest extends TestCase
         );
     }
 
-    public function testGetCurrentSpan()
+    public function test_get_current_span()
     {
         $this->assertSame(Span::getCurrent(), Measure::activeSpan());
     }
 
-    public function testGetActiveScope()
+    public function test_get_active_scope()
     {
         $this->assertSame(Context::storage()->scope(), Measure::activeScope());
     }
 
-    public function testGetTraceId()
+    public function test_get_trace_id()
     {
-        $traceId = (new RandomIdGenerator())->generateTraceId();
+        $traceId = (new RandomIdGenerator)->generateTraceId();
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
         $measure->shouldReceive('activeSpan->getContext->getTraceId')->andReturn($traceId);
 
@@ -103,12 +103,12 @@ class MeasureTest extends TestCase
         $this->assertSame($traceId, Measure::traceId());
     }
 
-    public function testGetPropagator()
+    public function test_get_propagator()
     {
         $this->assertSame(Globals::propagator(), Measure::propagator());
     }
 
-    public function testPropagationHeaders()
+    public function test_propagation_headers()
     {
         $context = Context::getCurrent();
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
@@ -122,7 +122,7 @@ class MeasureTest extends TestCase
         );
     }
 
-    public function testExtractContextFromPropagationHeaders()
+    public function test_extract_context_from_propagation_headers()
     {
         $headers = [
             'traceparent' => '00-1234567890abcdef1234567890abcdef-1234567890abcdef-01',

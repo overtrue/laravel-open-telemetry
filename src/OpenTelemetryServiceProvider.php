@@ -7,9 +7,7 @@ namespace Overtrue\LaravelOpenTelemetry;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\ServiceProvider;
-use OpenTelemetry\API\Common\Time\Clock;
 use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
-use Overtrue\LaravelOpenTelemetry\Support\CarbonClock;
 use Overtrue\LaravelOpenTelemetry\Support\GuzzleTraceMiddleware;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
 

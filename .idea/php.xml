@@ -153,6 +153,14 @@
       <path value="$PROJECT_DIR$/vendor/filp/whoops" />
       <path value="$PROJECT_DIR$/vendor/open-telemetry/opentelemetry-auto-laravel" />
       <path value="$PROJECT_DIR$/vendor/nunomaduro/collision" />
+      <path value="$PROJECT_DIR$/vendor/nyholm/psr7-server" />
+      <path value="$PROJECT_DIR$/vendor/staabm/side-effects-detector" />
+      <path value="$PROJECT_DIR$/vendor/league/uri-interfaces" />
+      <path value="$PROJECT_DIR$/vendor/league/uri" />
+      <path value="$PROJECT_DIR$/vendor/orchestra/sidekick" />
+      <path value="$PROJECT_DIR$/vendor/tbachert/spi" />
+      <path value="$PROJECT_DIR$/vendor/laravel/pail" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-php84" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.2">

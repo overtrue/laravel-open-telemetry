@@ -13,8 +13,7 @@ class SpanBuilder
 {
     public function __construct(
         protected SpanBuilderInterface $spanBuilder
-    ) {
-    }
+    ) {}
 
     public function setParent(?ContextInterface $context): SpanBuilder
     {
@@ -73,6 +72,9 @@ class SpanBuilder
         return $this->spanBuilder->startSpan();
     }
 
+    /**
+     * @throws \Throwable
+     */
     public function measure(\Closure $callback): mixed
     {
         $span = $this->spanBuilder->startSpan();

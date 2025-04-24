@@ -4,7 +4,7 @@ namespace Overtrue\LaravelOpenTelemetry\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
-use OpenTelemetry\API\Trace\SpanInterface;
+use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
@@ -22,6 +22,12 @@ class MeasureRequest
      */
     public function handle(Request $request, Closure $next, ?string $name = null)
     {
+        // skip if ignored by config `otel.ignore_routes`
+        $ignoredRoutes = config('otel.ignore_routes', []);
+        if (Str::is($ignoredRoutes, $request->path())) {
+            return $next($request);
+        }
+
         static::$allowedHeaders = $this->normalizeHeaders(config('otel.allowed_headers', []));
 
         static::$sensitiveHeaders = array_merge(
@@ -49,8 +55,6 @@ class MeasureRequest
             throw $exception;
         }
     }
-
-
 
     protected static function httpHostName(Request $request): string
     {
