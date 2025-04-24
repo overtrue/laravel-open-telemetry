@@ -22,8 +22,8 @@ class MeasureRequest
      */
     public function handle(Request $request, Closure $next, ?string $name = null)
     {
-        // skip if ignored by config `otel.ignore_routes`
-        $ignoredRoutes = config('otel.ignore_routes', []);
+        // skip if ignored by config `otel.ignore_paths`
+        $ignoredRoutes = config('otel.ignore_paths', []);
         if (Str::is($ignoredRoutes, $request->path())) {
             return $next($request);
         }

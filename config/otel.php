@@ -33,9 +33,9 @@ return [
     ],
 
     /**
-     * Ignore routes will not be traced. You can use `*` as wildcard.
+     * Ignore paths will not be traced. You can use `*` as wildcard.
      */
-    'ignore_routes' => [
+    'ignore_paths' => [
         // 'api/*',
         // 'webhook/*',
     ],
