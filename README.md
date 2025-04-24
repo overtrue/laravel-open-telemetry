@@ -40,6 +40,10 @@ OTEL_TRACES_EXPORTER=otlp
 #OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
 OTEL_PROPAGATORS=baggage,tracecontext
+
+OTEL_ALLOWED_HEADERS=*
+OTEL_SENSITIVE_HEADERS=authorization,authorization,proxy-authorization
+OTEL_IGNORE_PATHS=/foo,/bar*
 ```
 and other environment variables, you can find them in the configuration file: `config/otle.php`.
 
