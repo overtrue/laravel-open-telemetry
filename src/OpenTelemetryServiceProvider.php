@@ -40,6 +40,8 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             $this->app->make($watcher)->register($this->app);
             Log::debug(sprintf('[laravel-open-telemetry] watcher `%s` registered', $watcher));
         }
+
+        $this->registerCommands();
     }
 
     public function register(): void
@@ -70,6 +72,15 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         if (! $kernel->hasMiddleware(MeasureRequest::class)) {
             $kernel->prependMiddleware(MeasureRequest::class);
             Log::debug(sprintf('[laravel-open-telemetry] %s middleware injected', MeasureRequest::class));
+        }
+    }
+
+    protected function registerCommands()
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand::class,
+            ]);
         }
     }
 }

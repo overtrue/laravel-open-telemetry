@@ -106,6 +106,15 @@ $scope = $span->activate();
 $span->end();
 $scope->detach();
 ```
+### test events
+
+You can test the events by using the command:
+
+```bash
+php artisan otle:test
+```
+
+it will create a span with the name `test-event` and the attributes `key1` and `key2`.
 
 ## Contributing
 
