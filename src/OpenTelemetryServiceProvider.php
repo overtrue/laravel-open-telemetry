@@ -6,6 +6,7 @@ namespace Overtrue\LaravelOpenTelemetry;
 
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
 use Overtrue\LaravelOpenTelemetry\Support\GuzzleTraceMiddleware;
@@ -23,7 +24,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             return;
         }
 
+        Log::debug('[laravel-open-telemetry] started', config('otel'));
+
         if (config('otel.automatically_trace_requests')) {
+            Log::debug('[laravel-open-telemetry] automatically tracing requests is enabled');
             $this->injectHttpMiddleware(app(Kernel::class));
         }
 
@@ -34,6 +38,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
         foreach (config('otel.watchers') as $watcher) {
             $this->app->make($watcher)->register($this->app);
+            Log::debug(sprintf('[laravel-open-telemetry] watcher `%s` registered', $watcher));
         }
     }
 
@@ -50,16 +55,21 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->app->singleton(Measure::class, function ($app) {
             return new Measure($app);
         });
+
+        Log::debug('[laravel-open-telemetry] registered.');
     }
 
     protected function injectHttpMiddleware(Kernel $kernel): void
     {
         if (! $kernel instanceof \Illuminate\Foundation\Http\Kernel) {
+            Log::debug('[laravel-open-telemetry] Kernel is not an instance of Illuminate\Foundation\Http\Kernel, skipping middleware injection.');
+
             return;
         }
 
         if (! $kernel->hasMiddleware(MeasureRequest::class)) {
             $kernel->prependMiddleware(MeasureRequest::class);
+            Log::debug(sprintf('[laravel-open-telemetry] %s middleware injected', MeasureRequest::class));
         }
     }
 }

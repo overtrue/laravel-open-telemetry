@@ -4,6 +4,7 @@ namespace Overtrue\LaravelOpenTelemetry\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\SemConv\TraceAttributes;
@@ -25,6 +26,11 @@ class MeasureRequest
         // skip if ignored by config `otel.ignore_paths`
         $ignoredRoutes = config('otel.ignore_paths', []);
         if (Str::is($ignoredRoutes, $request->path())) {
+            Log::debug('[laravel-open-telemetry] request ignored', [
+                'path' => $request->path(),
+                'ignoredRoutes' => $ignoredRoutes,
+            ]);
+
             return $next($request);
         }
 
