@@ -25,6 +25,12 @@ class TestCommand extends Command
     {
         $this->info('Creating test span...');
 
+        if (! config('otel.enabled')) {
+            $this->info('OpenTelemetry is disabled.');
+
+            return Command::SUCCESS;
+        }
+
         // Create root span
         $rootSpan = Measure::start('Test Span');
         $rootSpan->span->setAttribute('test.attribute', 'test_value');
@@ -58,13 +64,13 @@ class TestCommand extends Command
 
         // Output result
         $this->info('Test completed!');
-        $this->info('Trace ID: ' . $traceId);
+        $this->info('Trace ID: '.$traceId);
 
         // Display information table
         $this->table(
             ['Span Name', 'Status', 'Attributes'],
             [
-                ['Test Span', 'OK', 'test.attribute=test_value, timestamp=' . $rootSpan->span->getAttribute('timestamp')],
+                ['Test Span', 'OK', 'test.attribute=test_value, timestamp='.$rootSpan->span->getAttribute('timestamp')],
                 ['Child Operation', 'OK', 'child.attribute=child_value'],
             ]
         );
