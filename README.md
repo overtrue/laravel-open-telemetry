@@ -1,12 +1,33 @@
 # Laravel OpenTelemetry
 
-This package provides a simple way to add [OpenTelemetry](https://opentelemetry.io/) to your Laravel application.
+This package provides a simple way to add [OpenTelemetry](https://opentelemetry.io/) **manual instrumentation** to your Laravel application.
 
 [![CI](https://github.com/overtrue/laravel-open-telemetry/workflows/Test/badge.svg)](https://github.com/overtrue/laravel-open-telemetry/actions)
 [![Latest Stable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/stable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![Latest Unstable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/unstable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![Total Downloads](https://poser.pugx.org/overtrue/laravel-open-telemetry/downloads)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![License](https://poser.pugx.org/overtrue/laravel-open-telemetry/license)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
+
+## 🎯 Package Positioning
+
+### vs Official Auto-Instrumentation Package
+
+- **[Official Package](https://packagist.org/packages/open-telemetry/opentelemetry-auto-laravel)**: Automatic instrumentation using hooks, zero code changes required
+- **This Package**: Manual instrumentation with Laravel-style APIs, providing fine-grained control and additional features
+
+### When to Use This Package
+
+- ✅ Need precise control over span attributes and lifecycle
+- ✅ Want to integrate deeply with Laravel events and services
+- ✅ Prefer explicit instrumentation with Laravel facades
+- ✅ Need custom watchers and middleware
+- ✅ Building complex tracing scenarios
+
+### When to Use Official Auto-Instrumentation
+
+- ✅ Want zero-code instrumentation
+- ✅ Need basic request/response tracing
+- ✅ Prefer automatic framework detection
 
 ## Installation
 
@@ -16,40 +37,123 @@ You can install the package via composer:
 composer require overtrue/laravel-open-telemetry
 ```
 
-## Usage
+## Configuration
 
-### Configuration
-
-Publish the configuration file:
+### Publish Configuration File
 
 ```bash
 php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider" --tag="config"
 ```
 
-### Update the environment variables
+### 📋 Configuration Categories
 
-> You can refer to [OpenTelemetry SDK Configuration Instructions](https://opentelemetry.io/docs/languages/sdk-configuration/general)
+#### 🟢 Required Configuration (Recommended)
+
+These configurations have defaults but should be explicitly set:
 
 ```dotenv
+# Basic Configuration - Highly Recommended
+OTEL_ENABLED=true                    # Enable/disable package functionality
+OTEL_SERVICE_NAME=my-laravel-app     # Service name for identification
+```
+
+#### 🟡 Important Optional Configuration
+
+Configure based on your use case:
+
+```dotenv
+# SDK Behavior Control
+OTEL_SDK_AUTO_INITIALIZE=true       # Auto-initialize SDK (default: true)
+OTEL_SERVICE_VERSION=1.0.0          # Service version (default: 1.0.0)
+
+# Exporter Configuration
+OTEL_TRACES_EXPORTER=console         # Trace export method (default: console)
+# OR
+OTEL_TRACES_EXPORTER=otlp           # Use OTLP exporter
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318  # OTLP endpoint
+```
+
+#### 🔵 Fully Optional Configuration
+
+These have sensible defaults and work without configuration:
+
+```dotenv
+# Request Tracing Control
+OTEL_AUTO_TRACE_REQUESTS=true       # Auto-trace HTTP requests (default: true)
+
+# Header Handling
+OTEL_ALLOWED_HEADERS=*              # Allowed headers (default: common headers)
+OTEL_SENSITIVE_HEADERS=authorization,cookie  # Sensitive headers (default: common sensitive headers)
+
+# Path Filtering
+OTEL_IGNORE_PATHS=horizon*,telescope*  # Ignored paths (default: common admin paths)
+
+# Response Headers
+OTEL_RESPONSE_TRACE_HEADER_NAME=X-Trace-Id  # Trace ID in response header (default: X-Trace-Id)
+
+# OTLP Detailed Configuration (only needed when using OTLP)
+OTEL_EXPORTER_OTLP_HEADERS=         # OTLP headers (default: empty)
+OTEL_EXPORTER_OTLP_TIMEOUT=10       # OTLP timeout (default: 10 seconds)
+
+# Other Exporters (usually not needed)
+OTEL_METRICS_EXPORTER=none          # Metrics export (default: none)
+OTEL_LOGS_EXPORTER=none             # Logs export (default: none)
+```
+
+### 🚀 Configuration Examples by Use Case
+
+#### Scenario 1: Quick Start/Testing
+```dotenv
+# Only need this one!
 OTEL_ENABLED=true
+```
+Everything else uses defaults, spans output to console.
+
+#### Scenario 2: Production Environment (External Collector)
+```dotenv
+OTEL_ENABLED=true
+OTEL_SERVICE_NAME=my-production-app
+OTEL_SERVICE_VERSION=2.1.0
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.com:4318
+```
+
+#### Scenario 3: Development Environment (Detailed Configuration)
+```dotenv
+OTEL_ENABLED=true
+OTEL_SERVICE_NAME=my-dev-app
+OTEL_TRACES_EXPORTER=console
 OTEL_AUTO_TRACE_REQUESTS=true
+OTEL_IGNORE_PATHS=_debugbar*,telescope*
+OTEL_SENSITIVE_HEADERS=authorization,cookie,x-api-key
+```
+
+#### Scenario 4: Disabled/Testing Environment
+```dotenv
+OTEL_ENABLED=false
+# OR
+OTEL_TRACES_EXPORTER=none
+```
+
+### Alternative: Official Auto-Instrumentation Setup
+
+If you prefer automatic instrumentation (requires `ext-opentelemetry` and official auto package):
+
+```bash
+composer require open-telemetry/opentelemetry-auto-laravel
+```
+
+```dotenv
 OTEL_PHP_AUTOLOAD_ENABLED=true
 OTEL_PHP_TRACE_CLI_ENABLED=true
-OTEL_SERVICE_NAME=my-app
-OTEL_TRACES_EXPORTER=otlp
-#OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
 OTEL_PROPAGATORS=baggage,tracecontext
-
-OTEL_ALLOWED_HEADERS=*
-OTEL_SENSITIVE_HEADERS=authorization,authorization,proxy-authorization
-OTEL_IGNORE_PATHS=/foo,/bar*
 ```
-and other environment variables, you can find them in the configuration file: `config/otle.php`.
+
+## Usage
 
 ### Register the middleware
 
-you can register the middleware in the `app/Http/Kernel.php`:
+You can register the middleware in the `app/Http/Kernel.php`:
 
 ```php
 protected $middleware = [
@@ -60,61 +164,150 @@ protected $middleware = [
 
 or you can set the env variable `OTEL_AUTO_TRACE_REQUESTS` to `true` to enable it automatically.
 
-### Custom span
+### Manual Span Creation
 
-You can create a custom span by using the `Overtrue\LaravelOpenTelemetry\Facades\Measure` facade:
+You can create custom spans using the `Overtrue\LaravelOpenTelemetry\Facades\Measure` facade:
+
+#### Simple Span
 
 ```php
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 Measure::span('your-span-name')->measure(function() {
-    // ...
+    // Your code here
 });
 ```
 
-or manually start and end a span:
+#### Manual Start/End
 
 ```php
-Measure::start('your-span-name');
+$span = Measure::start('your-span-name');
 
-// ...
+// Your code here
 
-Measure::end();
+Measure::end('your-span-name');
 ```
 
-and you can modify the span attributes by using a closure:
+#### With Attributes
 
 ```php
-Measure::start('your-span-name', function($span) {
-    $span->setAttribute('key', 'value');
-    // ...
+Measure::start('your-span-name', function($spanBuilder) {
+    $spanBuilder->setAttribute('key', 'value');
+    $spanBuilder->setSpanKind(\OpenTelemetry\API\Trace\SpanKind::KIND_CLIENT);
 });
 
-// ...
-Measure::end();
+// Your code here
+
+Measure::end('your-span-name');
 ```
 
-of course, you can get the span instance by using the `Measure::span()` method:
+#### Direct Span Control
 
 ```php
-$span = Measure::span('your-span-name');
-$span->setAttribute('key', 'value');
-$scope = $span->activate();
+$spanBuilder = Measure::span('your-span-name');
+$spanBuilder->setAttribute('key', 'value');
+$span = $spanBuilder->start();
 
-// ...
+// Your code here
 
 $span->end();
-$scope->detach();
 ```
-### test events
 
-You can test the events by using the command:
+### Check Tracing Status
+
+```php
+// Check if tracing is recording
+if (Measure::isRecording()) {
+    // Add expensive tracing operations
+}
+
+// Get detailed status
+$status = Measure::getStatus();
+// Returns: ['is_recording' => bool, 'active_spans_count' => int, ...]
+```
+
+### Test Tracing Setup
+
+You can test your tracing setup using the command:
 
 ```bash
-php artisan otle:test
+php artisan otel:test
 ```
 
-it will create a span with the name `test-event` and the attributes `key1` and `key2`.
+This command will:
+- Check your OpenTelemetry configuration
+- Create test spans with attributes and events
+- Display trace information and diagnostics
+- Show environment variable status
+
+## Troubleshooting
+
+### NonRecordingSpan Issue
+
+If you see `NonRecordingSpan` or traces not being recorded:
+
+1. **Check basic configuration:**
+   ```dotenv
+   OTEL_ENABLED=true
+   OTEL_SDK_AUTO_INITIALIZE=true
+   ```
+
+2. **Run the test command:**
+   ```bash
+   php artisan otel:test
+   ```
+
+3. **Check the output for specific guidance on missing configuration**
+
+### Common Issues
+
+- **Traces not appearing**: Ensure `OTEL_TRACES_EXPORTER` is set to `console` or `otlp`
+- **Performance concerns**: Set `OTEL_ENABLED=false` in non-production environments if needed
+- **Too many traces**: Use `OTEL_IGNORE_PATHS` to filter out unwanted requests
+
+## Advanced Features
+
+### Custom Watchers
+
+Create custom watchers to trace specific events:
+
+```php
+use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
+use Illuminate\Contracts\Foundation\Application;
+
+class CustomWatcher implements Watcher
+{
+    public function register(Application $app): void
+    {
+        // Register your event listeners
+    }
+}
+```
+
+Then add it to `config/otel.php`:
+
+```php
+'watchers' => [
+    // ... existing watchers
+    App\Watchers\CustomWatcher::class,
+],
+```
+
+### Context Propagation
+
+```php
+// Extract context from headers (useful for incoming requests)
+$context = Measure::extractContextFromPropagationHeaders($headers);
+
+// Get propagation headers (useful for outgoing requests)
+$headers = Measure::propagationHeaders();
+```
+
+## Requirements
+
+- PHP 8.4+
+- Laravel 10.0+ | 11.0+
+- OpenTelemetry SDK
 
 ## Contributing
 
@@ -135,7 +328,6 @@ _The code contribution process is not very formal. You just need to make sure th
 Many thanks to Jetbrains for kindly providing a license for me to work on this and other open-source projects.
 
 [![](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg)](https://www.jetbrains.com/?from=https://github.com/overtrue)
-
 
 ## License
 

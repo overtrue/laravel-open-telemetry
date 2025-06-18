@@ -14,6 +14,33 @@ return [
     'automatically_trace_requests' => env('OTEL_AUTO_TRACE_REQUESTS', true),
 
     /**
+     * SDK Configuration
+     */
+    'sdk' => [
+        'auto_initialize' => env('OTEL_SDK_AUTO_INITIALIZE', true),
+        'service_name' => env('OTEL_SERVICE_NAME', config('app.name', 'laravel-app')),
+        'service_version' => env('OTEL_SERVICE_VERSION', '1.0.0'),
+    ],
+
+    /**
+     * Exporter Configuration
+     */
+    'exporters' => [
+        'traces' => env('OTEL_TRACES_EXPORTER', 'console'),
+        'metrics' => env('OTEL_METRICS_EXPORTER', 'none'),
+        'logs' => env('OTEL_LOGS_EXPORTER', 'none'),
+    ],
+
+    /**
+     * OTLP Exporter Configuration
+     */
+    'otlp' => [
+        'endpoint' => env('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318'),
+        'headers' => env('OTEL_EXPORTER_OTLP_HEADERS', ''),
+        'timeout' => env('OTEL_EXPORTER_OTLP_TIMEOUT', 10),
+    ],
+
+    /**
      * Allow to trace requests with specific headers. You can use `*` as wildcard.
      */
     'allowed_headers' => explode(',', env('OTEL_ALLOWED_HEADERS', implode(',', [
@@ -27,16 +54,19 @@ return [
      * Sensitive headers will be marked as *** from the span attributes. You can use `*` as wildcard.
      */
     'sensitive_headers' => explode(',', env('OTEL_SENSITIVE_HEADERS', implode(',', [
-        // 'cookie',
-        // 'authorization',
+        'cookie',
+        'authorization',
+        'x-api-key',
     ]))),
 
     /**
      * Ignore paths will not be traced. You can use `*` as wildcard.
      */
     'ignore_paths' => explode(',', env('OTEL_IGNORE_PATHS', implode(',', [
-        // 'api/*',
-        // 'webhook/*',
+        'horizon*',
+        'telescope*',
+        '_debugbar*',
+        'health*',
     ]))),
 
     /**

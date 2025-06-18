@@ -51,11 +51,24 @@ class TestCommandTest extends TestCase
         // 设置 tracer 的期望行为
         $tracer->shouldReceive('spanBuilder')->andReturn($spanBuilder);
 
-        // 替换 Measure facade 的 tracer
+        // 替换 Measure facade 的方法
         Measure::shouldReceive('tracer')->andReturn($tracer);
         Measure::shouldReceive('activeSpan')->andReturn($span);
         Measure::shouldReceive('start')->andReturn(new StartedSpan($span, $scope));
         Measure::shouldReceive('end')->andReturnNull();
+
+        // 新增的方法
+        Measure::shouldReceive('getStatus')->andReturn([
+            'is_recording' => true,
+            'active_spans_count' => 0,
+            'tracer_provider' => [
+                'class' => 'OpenTelemetry\SDK\Trace\TracerProvider',
+                'is_noop' => false,
+                'is_recording' => true,
+            ],
+            'current_trace_id' => 'test-trace-id',
+        ]);
+        Measure::shouldReceive('isRecording')->andReturn(true);
     }
 
     public function test_command_creates_test_span()
@@ -66,11 +79,11 @@ class TestCommandTest extends TestCase
         // 验证命令执行成功
         $this->assertEquals(0, $result);
 
-        // 验证输出包含预期的信息
+        // 验证输出包含预期的信息（更新为新的输出格式）
         $output = Artisan::output();
-        $this->assertStringContainsString('Creating test span...', $output);
-        $this->assertStringContainsString('Test completed!', $output);
-        $this->assertStringContainsString('Trace ID:', $output);
+        $this->assertStringContainsString('=== OpenTelemetry Test Command ===', $output);
+        $this->assertStringContainsString('✅ Test completed!', $output);
+        $this->assertStringContainsString('📊 Trace ID:', $output);
     }
 
     public function test_command_creates_span_with_correct_attributes()
@@ -138,16 +151,27 @@ class TestCommandTest extends TestCase
         Measure::shouldReceive('activeSpan')->andReturnNull();
         Measure::shouldReceive('start')->andReturnNull();
         Measure::shouldReceive('end')->andReturnNull();
+        Measure::shouldReceive('getStatus')->andReturn([
+            'is_recording' => false,
+            'active_spans_count' => 0,
+            'tracer_provider' => [
+                'class' => 'OpenTelemetry\API\Trace\NoopTracerProvider',
+                'is_noop' => true,
+                'is_recording' => false,
+            ],
+            'current_trace_id' => null,
+        ]);
+        Measure::shouldReceive('isRecording')->andReturn(false);
 
         // 执行命令
         $result = Artisan::call('otel:test');
 
-        // 验证命令仍然执行成功
-        $this->assertEquals(0, $result);
+        // 验证命令现在返回失败状态（根据新的逻辑）
+        $this->assertEquals(1, $result);
 
-        // 验证输出不包含 OpenTelemetry 相关信息
+        // 验证输出包含错误信息
         $output = Artisan::output();
-        $this->assertStringNotContainsString('Trace ID:', $output);
+        $this->assertStringContainsString('OpenTelemetry is disabled in config', $output);
     }
 
     protected function tearDown(): void
