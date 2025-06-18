@@ -30,7 +30,7 @@ class TracerProviderManager
 
     private static function createTracerProvider(): TracerProviderInterface
     {
-        // 首先尝试使用全局的 TracerProvider
+        // 首先尝试使用全局的 TracerProvider（由 opentelemetry-auto-laravel 初始化）
         $globalProvider = Globals::tracerProvider();
 
         // 检查是否是有效的 TracerProvider（不是 NoopTracerProvider）
@@ -38,26 +38,29 @@ class TracerProviderManager
             return $globalProvider;
         }
 
-        // 如果全局 TracerProvider 无效且配置启用，创建一个基本的 SDK TracerProvider
-        if (config('otel.enabled', false) && config('otel.sdk.auto_initialize', true)) {
+        // 如果官方包没有初始化 TracerProvider，且我们的配置允许，提供一个基本的 fallback
+        if (config('otel.enabled', false) && config('otel.sdk.auto_initialize', false)) {
             try {
-                return self::createSDKTracerProvider();
-            } catch (\Throwable $e) {
-                // 如果创建失败，记录错误并使用 Noop Provider
                 if (config('app.debug')) {
-                    logger()->warning('Failed to create OpenTelemetry TracerProvider', [
+                    logger()->info('OpenTelemetry auto-laravel not initialized, creating fallback TracerProvider');
+                }
+
+                return self::createFallbackTracerProvider();
+            } catch (\Throwable $e) {
+                if (config('app.debug')) {
+                    logger()->warning('Failed to create fallback OpenTelemetry TracerProvider', [
                         'error' => $e->getMessage(),
-                        'suggestion' => 'Check your OpenTelemetry configuration or install the opentelemetry extension',
+                        'suggestion' => 'Ensure opentelemetry-auto-laravel is properly configured or disable OTEL_SDK_AUTO_INITIALIZE',
                     ]);
                 }
             }
         }
 
-        // 返回 Noop TracerProvider
+        // 返回 Noop TracerProvider（这是预期的行为，当 OpenTelemetry 未配置时）
         return $globalProvider;
     }
 
-    private static function createSDKTracerProvider(): TracerProviderInterface
+    private static function createFallbackTracerProvider(): TracerProviderInterface
     {
         $resource = ResourceInfo::create(Attributes::create([
             'service.name' => config('otel.sdk.service_name', config('app.name', 'laravel-app')),
@@ -65,6 +68,7 @@ class TracerProviderManager
             'telemetry.sdk.name' => 'opentelemetry',
             'telemetry.sdk.language' => 'php',
             'telemetry.sdk.version' => \Composer\InstalledVersions::getVersion('open-telemetry/sdk') ?? 'unknown',
+            'telemetry.auto.version' => 'manual-fallback', // 标识这是手动fallback
         ]));
 
         $tracerProviderBuilder = TracerProvider::builder()
@@ -96,11 +100,12 @@ class TracerProviderManager
     private static function createOtlpExporter(): ?\OpenTelemetry\SDK\Trace\SpanExporterInterface
     {
         try {
-            $endpoint = config('otel.otlp.endpoint', 'http://localhost:4318');
-            $headers = config('otel.otlp.headers', []);
+            // 注意：这里只是一个基本实现
+            // 在实际使用中，用户应该通过 opentelemetry-auto-laravel 配置 OTLP
+            if (config('app.debug')) {
+                logger()->info('Using fallback console exporter instead of OTLP. For production OTLP, configure opentelemetry-auto-laravel properly.');
+            }
 
-            // 这里需要根据实际的 OTLP exporter 实现来创建
-            // 由于我们没有具体的 OTLP 配置，暂时返回 console exporter
             return new ConsoleSpanExporter;
         } catch (\Throwable $e) {
             logger()->warning('Failed to create OTLP exporter, falling back to console', [
@@ -130,6 +135,16 @@ class TracerProviderManager
             'class' => get_class($provider),
             'is_noop' => $provider instanceof NoopTracerProvider,
             'is_recording' => ! ($provider instanceof NoopTracerProvider),
+            'source' => $provider instanceof NoopTracerProvider ? 'noop' :
+                       (self::isUsingGlobalProvider() ? 'auto-laravel' : 'fallback'),
         ];
+    }
+
+    private static function isUsingGlobalProvider(): bool
+    {
+        $globalProvider = Globals::tracerProvider();
+
+        return ! ($globalProvider instanceof NoopTracerProvider) &&
+               self::getTracerProvider() === $globalProvider;
     }
 }

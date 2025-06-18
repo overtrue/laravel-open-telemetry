@@ -10,24 +10,29 @@ This package provides a simple way to add [OpenTelemetry](https://opentelemetry.
 
 ## 🎯 Package Positioning
 
-### vs Official Auto-Instrumentation Package
+### Built on Official Auto-Instrumentation
 
-- **[Official Package](https://packagist.org/packages/open-telemetry/opentelemetry-auto-laravel)**: Automatic instrumentation using hooks, zero code changes required
-- **This Package**: Manual instrumentation with Laravel-style APIs, providing fine-grained control and additional features
+This package is **built on top of** the official [`open-telemetry/opentelemetry-auto-laravel`](https://packagist.org/packages/open-telemetry/opentelemetry-auto-laravel) package, providing additional manual instrumentation capabilities.
+
+### Package Relationship
+
+- **[Official Package](https://packagist.org/packages/open-telemetry/opentelemetry-auto-laravel)**: Foundation auto-instrumentation (automatically installed as dependency)
+- **This Package**: Additional manual instrumentation with Laravel-style APIs and enhanced features
 
 ### When to Use This Package
 
-- ✅ Need precise control over span attributes and lifecycle
-- ✅ Want to integrate deeply with Laravel events and services
+- ✅ Need both automatic AND manual instrumentation
+- ✅ Want precise control over span attributes and lifecycle
+- ✅ Need to integrate deeply with Laravel events and services
 - ✅ Prefer explicit instrumentation with Laravel facades
 - ✅ Need custom watchers and middleware
 - ✅ Building complex tracing scenarios
 
-### When to Use Official Auto-Instrumentation
+### When to Use Official Package Only
 
-- ✅ Want zero-code instrumentation
+- ✅ Want zero-code instrumentation only
 - ✅ Need basic request/response tracing
-- ✅ Prefer automatic framework detection
+- ✅ Prefer minimal setup
 
 ## Installation
 
@@ -135,19 +140,22 @@ OTEL_ENABLED=false
 OTEL_TRACES_EXPORTER=none
 ```
 
-### Alternative: Official Auto-Instrumentation Setup
+### Official Auto-Instrumentation Configuration
 
-If you prefer automatic instrumentation (requires `ext-opentelemetry` and official auto package):
-
-```bash
-composer require open-telemetry/opentelemetry-auto-laravel
-```
+This package automatically installs `open-telemetry/opentelemetry-auto-laravel` as a dependency. To enable the official auto-instrumentation features:
 
 ```dotenv
+# Enable PHP auto-instrumentation (requires ext-opentelemetry)
 OTEL_PHP_AUTOLOAD_ENABLED=true
 OTEL_PHP_TRACE_CLI_ENABLED=true
 OTEL_PROPAGATORS=baggage,tracecontext
+
+# Basic OpenTelemetry configuration (used by both packages)
+OTEL_SERVICE_NAME=my-laravel-app
+OTEL_TRACES_EXPORTER=console
 ```
+
+**Note**: The official package provides automatic instrumentation, while this package adds manual instrumentation capabilities on top.
 
 ## Usage
 
