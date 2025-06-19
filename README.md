@@ -50,32 +50,98 @@ composer require overtrue/laravel-open-telemetry
 php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider" --tag="config"
 ```
 
-### 📋 Configuration Categories
+### ⚠️ Important: Environment Variable Configuration
 
-#### 🟢 Required Configuration (Recommended)
+**OpenTelemetry SDK initializes before Laravel**, which means OpenTelemetry environment variables **cannot be set in Laravel's `.env` file**. They must be set as **server environment variables**.
 
-These configurations have defaults but should be explicitly set:
+**Reference**: [OpenTelemetry PHP Issue #1436](https://github.com/open-telemetry/opentelemetry-php/issues/1436)
 
-```dotenv
-# Basic Configuration - Highly Recommended
-OTEL_ENABLED=true                    # Enable/disable package functionality
-OTEL_SERVICE_NAME=my-laravel-app     # Service name for identification
+#### ✅ Correct Ways to Set Environment Variables
+
+**Option 1: Server Environment Variables**
+```bash
+# Set in your server environment
+export OTEL_PHP_AUTOLOAD_ENABLED=true
+export OTEL_SERVICE_NAME=my-laravel-app
+export OTEL_TRACES_EXPORTER=console
 ```
 
-#### 🟡 Important Optional Configuration
+**Option 2: Docker Environment**
+```yaml
+# docker-compose.yml
+services:
+  app:
+    environment:
+      - OTEL_PHP_AUTOLOAD_ENABLED=true
+      - OTEL_SERVICE_NAME=my-laravel-app
+      - OTEL_TRACES_EXPORTER=console
+```
 
-Configure based on your use case:
+**Option 3: PHP-FPM Configuration**
+```nginx
+# In your nginx server block
+location ~ \.php$ {
+    fastcgi_param OTEL_PHP_AUTOLOAD_ENABLED "true";
+    fastcgi_param OTEL_SERVICE_NAME "my-laravel-app";
+    fastcgi_param OTEL_TRACES_EXPORTER "console";
+    # ... other fastcgi_param directives
+}
+```
+
+**Option 4: Apache Environment**
+```apache
+# In your Apache virtual host or .htaccess
+SetEnv OTEL_PHP_AUTOLOAD_ENABLED "true"
+SetEnv OTEL_SERVICE_NAME "my-laravel-app"
+SetEnv OTEL_TRACES_EXPORTER "console"
+```
+
+#### ❌ This Will NOT Work
 
 ```dotenv
-# SDK Behavior Control
-OTEL_SDK_AUTO_INITIALIZE=true       # Auto-initialize SDK (default: true)
-OTEL_SERVICE_VERSION=1.0.0          # Service version (default: 1.0.0)
+# ❌ These in Laravel's .env file will be IGNORED by OpenTelemetry SDK
+OTEL_PHP_AUTOLOAD_ENABLED=true
+OTEL_SERVICE_NAME=my-laravel-app
+OTEL_TRACES_EXPORTER=console
+```
 
-# Exporter Configuration
-OTEL_TRACES_EXPORTER=console         # Trace export method (default: console)
-# OR
-OTEL_TRACES_EXPORTER=otlp           # Use OTLP exporter
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318  # OTLP endpoint
+#### 💡 Laravel-Specific Configuration
+
+Laravel-specific configurations (this package's features) **can** be set in `.env` because they are read by Laravel after initialization:
+
+```dotenv
+# ✅ These work in Laravel's .env file (this package's configurations)
+OTEL_ENABLED=true
+OTEL_AUTO_TRACE_REQUESTS=true
+OTEL_IGNORE_PATHS=horizon*,telescope*
+OTEL_SENSITIVE_HEADERS=authorization,cookie
+```
+
+### 📋 Configuration Categories
+
+#### 🟢 OpenTelemetry SDK Configuration (Server Environment Variables)
+
+These **must be set as server environment variables**, not in Laravel's `.env` file:
+
+```bash
+# Core OpenTelemetry SDK Configuration - Set as server environment variables
+export OTEL_PHP_AUTOLOAD_ENABLED=true              # Enable auto-instrumentation
+export OTEL_SERVICE_NAME=my-laravel-app            # Service name for identification
+export OTEL_TRACES_EXPORTER=console                # Trace export method
+# OR for production
+export OTEL_TRACES_EXPORTER=otlp                   # Use OTLP exporter
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318  # OTLP endpoint
+```
+
+#### 🟡 Laravel Package Configuration (Laravel .env File)
+
+These **can be set in Laravel's `.env` file** because they are read by this package:
+
+```dotenv
+# This Package's Configuration - Can be set in Laravel's .env
+OTEL_ENABLED=true                    # Enable/disable this package's functionality
+OTEL_SDK_AUTO_INITIALIZE=false      # Auto-initialize SDK fallback (default: false)
+OTEL_SERVICE_VERSION=1.0.0          # Service version (default: 1.0.0)
 ```
 
 #### 🔵 Fully Optional Configuration
@@ -108,36 +174,64 @@ OTEL_LOGS_EXPORTER=none             # Logs export (default: none)
 ### 🚀 Configuration Examples by Use Case
 
 #### Scenario 1: Quick Start/Testing
+
+**Server Environment Variables:**
+```bash
+export OTEL_PHP_AUTOLOAD_ENABLED=true
+export OTEL_SERVICE_NAME=my-app
+export OTEL_TRACES_EXPORTER=console
+```
+
+**Laravel .env file:**
 ```dotenv
-# Only need this one!
 OTEL_ENABLED=true
 ```
-Everything else uses defaults, spans output to console.
 
 #### Scenario 2: Production Environment (External Collector)
+
+**Server Environment Variables:**
+```bash
+export OTEL_PHP_AUTOLOAD_ENABLED=true
+export OTEL_SERVICE_NAME=my-production-app
+export OTEL_TRACES_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.com:4318
+```
+
+**Laravel .env file:**
 ```dotenv
 OTEL_ENABLED=true
-OTEL_SERVICE_NAME=my-production-app
 OTEL_SERVICE_VERSION=2.1.0
-OTEL_TRACES_EXPORTER=otlp
-OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.com:4318
+OTEL_AUTO_TRACE_REQUESTS=true
 ```
 
 #### Scenario 3: Development Environment (Detailed Configuration)
+
+**Server Environment Variables:**
+```bash
+export OTEL_PHP_AUTOLOAD_ENABLED=true
+export OTEL_SERVICE_NAME=my-dev-app
+export OTEL_TRACES_EXPORTER=console
+```
+
+**Laravel .env file:**
 ```dotenv
 OTEL_ENABLED=true
-OTEL_SERVICE_NAME=my-dev-app
-OTEL_TRACES_EXPORTER=console
 OTEL_AUTO_TRACE_REQUESTS=true
-OTEL_IGNORE_PATHS=_debugbar*,telescope*
+OTEL_IGNORE_PATHS=_debugbar*,telescope*,horizon*
 OTEL_SENSITIVE_HEADERS=authorization,cookie,x-api-key
 ```
 
 #### Scenario 4: Disabled/Testing Environment
+
+**Server Environment Variables:**
+```bash
+# Can leave OpenTelemetry variables unset or set to false
+export OTEL_PHP_AUTOLOAD_ENABLED=false
+```
+
+**Laravel .env file:**
 ```dotenv
 OTEL_ENABLED=false
-# OR
-OTEL_TRACES_EXPORTER=none
 ```
 
 ### Official Auto-Instrumentation Configuration
@@ -254,24 +348,35 @@ This command will:
 
 If you see `NonRecordingSpan` or traces not being recorded:
 
-1. **Check basic configuration:**
-   ```dotenv
-   OTEL_ENABLED=true
-   OTEL_SDK_AUTO_INITIALIZE=true
+1. **Check OpenTelemetry SDK environment variables (server-level):**
+   ```bash
+   # These must be server environment variables, NOT in .env
+   export OTEL_PHP_AUTOLOAD_ENABLED=true
+   export OTEL_SERVICE_NAME=my-app
+   export OTEL_TRACES_EXPORTER=console
    ```
 
-2. **Run the test command:**
+2. **Check Laravel package configuration (.env file):**
+   ```dotenv
+   # These can be in Laravel's .env file
+   OTEL_ENABLED=true
+   OTEL_SDK_AUTO_INITIALIZE=false
+   ```
+
+3. **Run the test command:**
    ```bash
    php artisan otel:test
    ```
 
-3. **Check the output for specific guidance on missing configuration**
+4. **Check the output for specific guidance on missing configuration**
 
 ### Common Issues
 
-- **Traces not appearing**: Ensure `OTEL_TRACES_EXPORTER` is set to `console` or `otlp`
-- **Performance concerns**: Set `OTEL_ENABLED=false` in non-production environments if needed
-- **Too many traces**: Use `OTEL_IGNORE_PATHS` to filter out unwanted requests
+- **Environment variables ignored**: Remember that OpenTelemetry SDK variables **must be server environment variables**, not in Laravel's `.env` file. See [issue #1436](https://github.com/open-telemetry/opentelemetry-php/issues/1436)
+- **Works with `php artisan serve` but not with nginx/apache**: This is because `artisan serve` reads `.env` differently. Set OpenTelemetry variables as server environment variables
+- **Traces not appearing**: Ensure `OTEL_TRACES_EXPORTER` is set to `console` or `otlp` as a **server environment variable**
+- **Performance concerns**: Set `OTEL_ENABLED=false` in Laravel's `.env` file in non-production environments
+- **Too many traces**: Use `OTEL_IGNORE_PATHS` in Laravel's `.env` file to filter out unwanted requests
 
 ## Advanced Features
 
