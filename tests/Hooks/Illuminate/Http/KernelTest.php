@@ -30,7 +30,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -54,7 +54,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -78,7 +78,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -105,7 +105,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -133,7 +133,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -160,7 +160,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);
@@ -188,7 +188,7 @@ class KernelTest extends TestCase
         $hook = Kernel::hook($instrumentation);
 
         // Create response
-        $response = new Response();
+        $response = new Response;
 
         // Use reflection to access private method
         $reflection = new \ReflectionClass($hook);

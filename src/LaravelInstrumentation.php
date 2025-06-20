@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Overtrue\LaravelOpenTelemetry;
 
-use Overtrue\LaravelOpenTelemetry\Hooks;
 use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 
 /**
@@ -23,18 +22,8 @@ class LaravelInstrumentation
     public static function register(): void
     {
         // Register ApplicationHook for Watchers
-        $applicationHookClass = Hooks\Illuminate\Foundation\Application::class;
-        if (class_exists($applicationHookClass)) {
-            $hook = $applicationHookClass::hook(self::instrumentation());
-            $hook->instrument();
-        }
-
-        // Register KernelHook for Response Trace ID
-        $kernelHookClass = Hooks\Illuminate\Http\Kernel::class;
-        if (class_exists($kernelHookClass)) {
-            $hook = $kernelHookClass::hook(self::instrumentation());
-            $hook->instrument();
-        }
+        Hooks\Illuminate\Foundation\Application::hook(self::instrumentation());
+        Hooks\Illuminate\Contracts\Http\Kernel::hook(self::instrumentation());
     }
 
     /**

@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\Context\Propagation\PropagationGetterInterface;
 use OpenTelemetry\Context\ScopeInterface;
 
 /**

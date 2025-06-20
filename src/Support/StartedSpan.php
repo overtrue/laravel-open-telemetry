@@ -12,8 +12,7 @@ class StartedSpan
     public function __construct(
         public SpanInterface $span,
         public ScopeInterface $scope
-    ) {
-    }
+    ) {}
 
     public function getSpan(): SpanInterface
     {

@@ -102,7 +102,7 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $provider->boot();
 
         // Create a PendingRequest instance
-        $request = new PendingRequest();
+        $request = new PendingRequest;
 
         // Use the withTrace macro
         $requestWithTrace = $request->withTrace();

@@ -41,7 +41,6 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         Log::debug('[laravel-open-telemetry] registered.');
     }
 
-
     protected function registerCommands()
     {
         if ($this->app->runningInConsole()) {

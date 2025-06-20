@@ -6,18 +6,13 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Carbon\CarbonInterface;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
-use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\Context\ContextInterface;
-use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;
 
 // this file is copied from https://github.com/keepsuit/laravel-opentelemetry/blob/main/src/Support/SpanBuilder.php
 class SpanBuilder
 {
-    public function __construct(protected SpanBuilderInterface $builder)
-    {
-    }
+    public function __construct(protected SpanBuilderInterface $builder) {}
 
     public function setParent(?Context $context = null): self
     {

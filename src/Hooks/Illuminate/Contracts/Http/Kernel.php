@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Overtrue\LaravelOpenTelemetry\Hooks\Illuminate\Http;
+namespace Overtrue\LaravelOpenTelemetry\Hooks\Illuminate\Contracts\Http;
 
-use Illuminate\Http\Kernel as HttpKernel;
+use Illuminate\Contracts\Http\Kernel as KernelContract;
 use OpenTelemetry\Contrib\Instrumentation\Laravel\Hooks\LaravelHook;
 use OpenTelemetry\Contrib\Instrumentation\Laravel\Hooks\LaravelHookTrait;
+use OpenTelemetry\Contrib\Instrumentation\Laravel\Hooks\PostHookTrait;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,19 +16,19 @@ use function OpenTelemetry\Instrumentation\hook;
 class Kernel implements LaravelHook
 {
     use LaravelHookTrait;
+    use PostHookTrait;
 
     public function instrument(): void
     {
         // Hook into the handle method to add trace ID to response
         hook(
-            class: HttpKernel::class,
+            class: KernelContract::class,
             function: 'handle',
-            post: function (HttpKernel $kernel, array $params, Response $response) {
-                $this->addTraceIdToResponse($response);
-
-                return $response;
-            }
-        );
+            post: function (KernelContract $kernel, array $params, ?Response $response, ?\Throwable $exception) {
+                if ($response) {
+                    $this->addTraceIdToResponse($response);
+                }
+            });
     }
 
     /**

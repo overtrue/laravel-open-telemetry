@@ -7,6 +7,7 @@ namespace Overtrue\LaravelOpenTelemetry\Hooks\Illuminate\Foundation;
 use Illuminate\Foundation\Application as FoundationApplication;
 use OpenTelemetry\Contrib\Instrumentation\Laravel\Hooks\LaravelHook;
 use OpenTelemetry\Contrib\Instrumentation\Laravel\Hooks\LaravelHookTrait;
+
 use function OpenTelemetry\Instrumentation\hook;
 
 class Application implements LaravelHook
@@ -15,6 +16,7 @@ class Application implements LaravelHook
 
     public function instrument(): void
     {
+        file_put_contents('/tmp/telemetry.log', 111);
         hook(
             class: FoundationApplication::class,
             function: 'boot',

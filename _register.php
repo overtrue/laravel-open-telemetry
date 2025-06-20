@@ -12,6 +12,7 @@ if (class_exists(Sdk::class) && Sdk::isInstrumentationDisabled('laravel') === tr
 // Check if OpenTelemetry extension is loaded
 if (extension_loaded('opentelemetry') === false) {
     trigger_error('The opentelemetry extension must be loaded in order to autoload the OpenTelemetry Laravel auto-instrumentation', E_USER_WARNING);
+
     return;
 }
 
@@ -21,6 +22,6 @@ if (! class_exists(\Illuminate\Foundation\Application::class)) {
 }
 
 // Register Laravel enhancements
-require_once __DIR__ . '/src/LaravelInstrumentation.php';
+require_once __DIR__.'/src/LaravelInstrumentation.php';
 
 \Overtrue\LaravelOpenTelemetry\LaravelInstrumentation::register();

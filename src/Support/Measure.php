@@ -16,9 +16,7 @@ class Measure
 {
     protected static ?StartedSpan $currentSpan = null;
 
-    public function __construct(protected Application $app)
-    {
-    }
+    public function __construct(protected Application $app) {}
 
     public function span(string $spanName): SpanBuilder
     {
@@ -45,7 +43,7 @@ class Measure
 
     public function tracer(): TracerInterface
     {
-        return $this->app->make(TracerInterface::class);
+        return Globals::tracerProvider()->getTracer('io.opentelemetry.contrib.php.laravel');
     }
 
     public function activeSpan(): SpanInterface
@@ -68,7 +66,7 @@ class Measure
         return Globals::propagator();
     }
 
-    public function propagationHeaders(Context $context = null): array
+    public function propagationHeaders(?Context $context = null): array
     {
         $headers = [];
         $this->propagator()->inject($headers, null, $context);

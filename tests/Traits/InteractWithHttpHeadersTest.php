@@ -16,7 +16,7 @@ class InteractWithHttpHeadersTest extends TestCase
         // Set default config for headers
         config([
             'otel.allowed_headers' => ['content-type', 'user-agent', 'x-*'],
-            'otel.sensitive_headers' => ['authorization', 'x-api-key', '*-token']
+            'otel.sensitive_headers' => ['authorization', 'x-api-key', '*-token'],
         ]);
     }
 
@@ -27,7 +27,7 @@ class InteractWithHttpHeadersTest extends TestCase
         $headers = [
             'Content-Type' => 'application/json',
             'USER-AGENT' => ['Mozilla/5.0', 'Chrome/91.0'],
-            'X-Custom' => 'value'
+            'X-Custom' => 'value',
         ];
 
         // Use reflection to test protected method
@@ -40,7 +40,7 @@ class InteractWithHttpHeadersTest extends TestCase
         $expected = [
             'content-type' => 'application/json',
             'user-agent' => 'Mozilla/5.0, Chrome/91.0',
-            'x-custom' => 'value'
+            'x-custom' => 'value',
         ];
 
         $this->assertEquals($expected, $result);
@@ -83,7 +83,7 @@ class InteractWithHttpHeadersTest extends TestCase
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer secret-token',
             'X-Custom' => 'custom-value',
-            'Blocked-Header' => 'blocked-value'
+            'Blocked-Header' => 'blocked-value',
         ];
 
         // Expect setAttribute calls for allowed headers
@@ -108,7 +108,8 @@ class InteractWithHttpHeadersTest extends TestCase
 
     protected function getTraitInstance()
     {
-        return new class() {
+        return new class
+        {
             use InteractWithHttpHeaders;
         };
     }

@@ -33,7 +33,7 @@ trait InteractWithHttpHeaders
 
         foreach ($normalized as $key => $value) {
             if ($this->headerIsAllowed($key, $allowedHeaders)) {
-                $attributeKey = $prefix . $key;
+                $attributeKey = $prefix.$key;
 
                 if ($this->headerIsSensitive($key, $sensitiveHeaders)) {
                     $span->setAttribute($attributeKey, '***');
@@ -49,7 +49,7 @@ trait InteractWithHttpHeaders
      */
     protected function headerIsAllowed(string $header, array $allowedHeaders): bool
     {
-        return array_any($allowedHeaders, fn($pattern) => fnmatch($pattern, $header));
+        return array_any($allowedHeaders, fn ($pattern) => fnmatch($pattern, $header));
     }
 
     /**
@@ -57,6 +57,6 @@ trait InteractWithHttpHeaders
      */
     protected function headerIsSensitive(string $header, array $sensitiveHeaders): bool
     {
-        return array_any($sensitiveHeaders, fn($pattern) => fnmatch($pattern, $header));
+        return array_any($sensitiveHeaders, fn ($pattern) => fnmatch($pattern, $header));
     }
 }

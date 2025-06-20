@@ -6,21 +6,21 @@ class ConfigTest extends TestCase
 {
     public function test_config_file_exists()
     {
-        $configPath = __DIR__ . '/../config/otel.php';
+        $configPath = __DIR__.'/../config/otel.php';
 
         $this->assertFileExists($configPath);
     }
 
     public function test_config_returns_array()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertIsArray($config);
     }
 
     public function test_config_has_required_keys()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertArrayHasKey('response_trace_header_name', $config);
         $this->assertArrayHasKey('watchers', $config);
@@ -31,14 +31,14 @@ class ConfigTest extends TestCase
 
     public function test_response_trace_header_name_is_configurable()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertEquals('X-Trace-Id', $config['response_trace_header_name']);
     }
 
     public function test_watchers_contains_expected_classes()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $expectedWatchers = [
             \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
@@ -53,7 +53,7 @@ class ConfigTest extends TestCase
 
     public function test_allowed_headers_is_array()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertIsArray($config['allowed_headers']);
         $this->assertContains('referer', $config['allowed_headers']);
@@ -64,7 +64,7 @@ class ConfigTest extends TestCase
 
     public function test_sensitive_headers_is_array()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertIsArray($config['sensitive_headers']);
         $this->assertContains('cookie', $config['sensitive_headers']);
@@ -74,7 +74,7 @@ class ConfigTest extends TestCase
 
     public function test_ignore_paths_is_array()
     {
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertIsArray($config['ignore_paths']);
         $this->assertContains('horizon*', $config['ignore_paths']);
@@ -90,7 +90,7 @@ class ConfigTest extends TestCase
         $_ENV['OTEL_RESPONSE_TRACE_HEADER_NAME'] = 'Custom-Trace-Header';
 
         // Re-evaluate the config
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertEquals('Custom-Trace-Header', $config['response_trace_header_name']);
 
@@ -109,7 +109,7 @@ class ConfigTest extends TestCase
         $_ENV['OTEL_ALLOWED_HEADERS'] = 'content-type,user-agent,custom-header';
 
         // Re-evaluate the config
-        $config = include __DIR__ . '/../config/otel.php';
+        $config = include __DIR__.'/../config/otel.php';
 
         $this->assertEquals(['content-type', 'user-agent', 'custom-header'], $config['allowed_headers']);
 

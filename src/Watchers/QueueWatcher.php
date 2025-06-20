@@ -22,8 +22,7 @@ class QueueWatcher extends Watcher
 {
     public function __construct(
         private readonly CachedInstrumentation $instrumentation,
-    ) {
-    }
+    ) {}
 
     public function register(Application $app): void
     {
