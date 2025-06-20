@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
@@ -7,119 +9,129 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
-use Illuminate\Queue\QueueManager;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
+use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\API\Trace\StatusCode;
-use OpenTelemetry\Context\Context;
-use OpenTelemetry\SDK\Trace\Span;
-use OpenTelemetry\SemConv\TraceAttributes;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
+use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
 
-class QueueWatcher implements Watcher
+/**
+ * Queue Watcher
+ *
+ * Listen to queue job processing and enqueueing, record connection, queue name, job information, status
+ */
+class QueueWatcher extends Watcher
 {
-    use InteractWithEventTimestamp;
-
-    /**
-     * @var array<string, \OpenTelemetry\API\Trace\SpanInterface>
-     */
-    protected array $activeSpans = [];
+    public function __construct(
+        private readonly CachedInstrumentation $instrumentation,
+    ) {
+    }
 
     public function register(Application $app): void
     {
-        $this->recordJobQueueing($app);
-        $this->recordJobProcessing($app);
+        $app['events']->listen(JobQueued::class, [$this, 'recordJobQueued']);
+        $app['events']->listen(JobProcessing::class, [$this, 'recordJobProcessing']);
+        $app['events']->listen(JobProcessed::class, [$this, 'recordJobProcessed']);
+        $app['events']->listen(JobFailed::class, [$this, 'recordJobFailed']);
     }
 
-    protected function recordJobQueueing($app): void
+    public function recordJobQueued(JobQueued $event): void
     {
-        if ($app->resolved('queue')) {
-            $this->registerQueueInterceptor($app['queue']);
-        } else {
-            $app->afterResolving('queue', fn ($queue) => $this->registerQueueInterceptor($queue));
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder('queue.queued')
+            ->setSpanKind(SpanKind::KIND_PRODUCER)
+            ->startSpan();
+
+        $attributes = [
+            'queue.connection' => $event->connectionName,
+            'queue.name' => $event->queue,
+            'queue.job.class' => $event->job::class,
+            'queue.job.id' => $event->id,
+        ];
+
+        // Record delay time
+        if (method_exists($event->job, 'delay') && $event->job->delay) {
+            $attributes['queue.job.delay'] = $event->job->delay;
         }
 
-        $app['events']->listen(JobQueued::class, function (JobQueued $event) {
-            $uuid = $event->payload()['uuid'] ?? null;
-
-            if (! is_string($uuid)) {
-                return;
-            }
-
-            $span = $this->activeSpans[$uuid] ?? null;
-
-            $span?->end();
-
-            unset($this->activeSpans[$uuid]);
-        });
+        $span->setAttributes($attributes);
+        $span->end();
     }
 
-    protected function registerQueueInterceptor(QueueManager $queue): void
+    public function recordJobProcessing(JobProcessing $event): void
     {
-        $queue->createPayloadUsing(function (string $connection, ?string $queue, array $payload) {
-            $uuid = $payload['uuid'];
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder('queue.processing')
+            ->setSpanKind(SpanKind::KIND_CONSUMER)
+            ->startSpan();
 
-            if (! is_string($uuid)) {
-                return $payload;
-            }
+        $payload = $event->job->payload();
 
-            $jobName = Arr::get($payload, 'displayName', 'unknown');
-            $queueName = Str::after($queue ?? 'default', 'queues:');
+        $attributes = [
+            'queue.connection' => $event->connectionName,
+            'queue.name' => $event->job->getQueue(),
+            'queue.job.class' => $payload['displayName'] ?? 'unknown',
+            'queue.job.id' => $event->job->getJobId(),
+            'queue.job.attempts' => $event->job->attempts(),
+            'queue.job.max_tries' => $payload['maxTries'] ?? null,
+            'queue.job.timeout' => $payload['timeout'] ?? null,
+        ];
 
-            $span = Measure::span(sprintf('[Job] %s enqueue', $jobName))
-                ->setSpanKind(SpanKind::KIND_PRODUCER)
-                ->setAttribute(TraceAttributes::MESSAGING_SYSTEM, $this->connectionDriver($connection))
-                ->setAttribute(TraceAttributes::MESSAGING_OPERATION_TYPE, 'enqueue')
-                ->setAttribute(TraceAttributes::MESSAGING_MESSAGE_ID, $uuid)
-                ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $queueName)
-                ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $jobName)
-                ->start();
+        // Record job data size
+        if (isset($payload['data'])) {
+            $attributes['queue.job.data_size'] = strlen(serialize($payload['data']));
+        }
 
-            $context = $span->storeInContext(Context::getCurrent());
-
-            $this->activeSpans[$uuid] = $span;
-
-            return Measure::propagationHeaders($context);
-        });
+        $span->setAttributes($attributes);
+        $span->end();
     }
 
-    protected function recordJobProcessing(): void
+    public function recordJobProcessed(JobProcessed $event): void
     {
-        app('events')->listen(JobProcessing::class, function (JobProcessing $event) {
-            $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder('queue.processed')
+            ->setSpanKind(SpanKind::KIND_CONSUMER)
+            ->startSpan();
 
-            $span = Measure::span(sprintf('[Job] %s process', $event->job->resolveName()))
-                ->setSpanKind(SpanKind::KIND_CONSUMER)
-                ->setParent($context)
-                ->setAttribute(TraceAttributes::MESSAGING_SYSTEM, $this->connectionDriver($event->connectionName))
-                ->setAttribute(TraceAttributes::MESSAGING_OPERATION_TYPE, 'process')
-                ->setAttribute(TraceAttributes::MESSAGING_MESSAGE_ID, $event->job->uuid())
-                ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_NAME, $event->job->getQueue())
-                ->setAttribute(TraceAttributes::MESSAGING_DESTINATION_TEMPLATE, $event->job->resolveName())
-                ->start();
-        });
+        $payload = $event->job->payload();
 
-        app('events')->listen(JobProcessed::class, function (JobProcessed $event) {
-            $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
-            $span = Span::fromContext($context);
-            $span->end();
-        });
+        $attributes = [
+            'queue.connection' => $event->connectionName,
+            'queue.name' => $event->job->getQueue(),
+            'queue.job.class' => $payload['displayName'] ?? 'unknown',
+            'queue.job.id' => $event->job->getJobId(),
+            'queue.job.attempts' => $event->job->attempts(),
+            'queue.job.status' => 'completed',
+        ];
 
-        app('events')->listen(JobFailed::class, function (JobFailed $event) {
-            $context = Measure::extractContextFromPropagationHeaders($event->job->payload());
-            $span = Span::fromContext($context);
-
-            $span->recordException($event->exception)
-                ->setStatus(StatusCode::STATUS_ERROR);
-
-            $span->end();
-        });
+        $span->setAttributes($attributes);
+        $span->end();
     }
 
-    protected function connectionDriver(string $connection): string
+    public function recordJobFailed(JobFailed $event): void
     {
-        return config(sprintf('queue.connections.%s.driver', $connection), 'unknown');
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder('queue.failed')
+            ->setSpanKind(SpanKind::KIND_CONSUMER)
+            ->startSpan();
+
+        $payload = $event->job->payload();
+
+        $attributes = [
+            'queue.connection' => $event->connectionName,
+            'queue.name' => $event->job->getQueue(),
+            'queue.job.class' => $payload['displayName'] ?? 'unknown',
+            'queue.job.id' => $event->job->getJobId(),
+            'queue.job.attempts' => $event->job->attempts(),
+            'queue.job.status' => 'failed',
+            'queue.job.error' => $event->exception->getMessage(),
+            'queue.job.error_type' => get_class($event->exception),
+        ];
+
+        $span->recordException($event->exception);
+        $span->setAttributes($attributes);
+        $span->end();
     }
 }

@@ -28,7 +28,6 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     {
         return new class($traitName)
         {
-            use \Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
             use \Overtrue\LaravelOpenTelemetry\Traits\InteractWithHttpHeaders;
 
             private string $traitName;

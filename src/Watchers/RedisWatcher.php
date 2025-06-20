@@ -1,78 +1,59 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Redis\Events\CommandExecuted;
-use Illuminate\Redis\RedisManager;
+use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\SemConv\TraceAttributes;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Traits\InteractWithEventTimestamp;
+use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
 
-class RedisWatcher implements Watcher
+/**
+ * Redis Watcher
+ *
+ * Listen to Redis commands, record command, parameters, and result type
+ */
+class RedisWatcher extends Watcher
 {
-    use InteractWithEventTimestamp;
+    public function __construct(
+        private readonly CachedInstrumentation $instrumentation,
+    ) {
+    }
 
-    /**
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
-     */
     public function register(Application $app): void
     {
-        $app['events']->listen(CommandExecuted::class, $this->recordCommand(...));
-
-        if ($app->resolved('redis')) {
-            $this->registerRedisEvents($app->make('redis'));
-        } else {
-            $app->afterResolving('redis', fn ($redis) => $this->registerRedisEvents($redis));
-        }
+        $app['events']->listen(CommandExecuted::class, [$this, 'recordCommand']);
     }
 
     public function recordCommand(CommandExecuted $event): void
     {
-        $name = sprintf('[Redis] %s %s', $event->connection->getName(), $event->command);
-
-        $span = Measure::span($name)
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder(sprintf('redis %s', strtolower($event->command)))
             ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setStartTimestamp($this->getEventStartTimestampNs($event->time))
-            ->start();
+            ->startSpan();
 
-        if ($span->isRecording()) {
-            $span->setAttribute(TraceAttributes::DB_SYSTEM_NAME, 'redis')
-                ->setAttribute(TraceAttributes::DB_QUERY_TEXT, $this->formatCommand($event->command, $event->parameters))
-                ->setAttribute(TraceAttributes::SERVER_ADDRESS, $event->connection->client()->getHost());
+        $attributes = [
+            'db.system' => 'redis',
+            'db.operation' => strtolower($event->command),
+            'redis.command' => strtoupper($event->command),
+            'redis.connection_name' => $event->connectionName,
+            'redis.time' => $event->time,
+        ];
+
+        // Record parameters (limit length to avoid oversized spans)
+        if (! empty($event->parameters)) {
+            $argsString = implode(' ', array_map(function ($arg) {
+                return is_string($arg) ? (strlen($arg) > 100 ? substr($arg, 0, 100).'...' : $arg) :
+                       (is_scalar($arg) ? (string) $arg : gettype($arg));
+            }, array_slice($event->parameters, 0, 5))); // Only record first 5 parameters
+            $attributes['redis.args'] = $argsString;
+            $attributes['redis.args_count'] = count($event->parameters);
         }
 
+        $span->setAttributes($attributes);
         $span->end();
-    }
-
-    protected function formatCommand(string $command, array $parameters): string
-    {
-        $parameters = collect($parameters)->map(function ($parameter) {
-            if (is_array($parameter)) {
-                return collect($parameter)->map(function ($value, $key) {
-                    if (is_array($value)) {
-                        return json_encode($value);
-                    }
-
-                    return is_int($key) ? $value : sprintf('%s %s', $key, $value);
-                })->implode(' ');
-            }
-
-            return $parameter;
-        })->implode(' ');
-
-        return sprintf('%s %s', $command, $parameters);
-    }
-
-    protected function registerRedisEvents(mixed $redis): void
-    {
-        if ($redis instanceof RedisManager) {
-            foreach ($redis->connections() ?? [] as $connection) {
-                $connection->setEventDispatcher(app('events'));
-            }
-
-            $redis->enableEvents();
-        }
     }
 }

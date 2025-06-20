@@ -1,91 +1,62 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overtrue\LaravelOpenTelemetry\Traits;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\SpanInterface;
-use Symfony\Component\HttpFoundation\Response;
 
 trait InteractWithHttpHeaders
 {
     /**
-     * @var array<string>
+     * Normalize headers for consistent processing.
      */
-    protected array $defaultSensitiveHeaders = [
-        'authorization',
-        'cookie',
-        'set-cookie',
-    ];
-
-    /**
-     * @var array<string>
-     */
-    protected static array $allowedHeaders = [];
-
-    /**
-     * @var array<string>
-     */
-    protected static array $sensitiveHeaders = [];
-
-    /**
-     * @return array<string>
-     */
-    public static function getAllowedHeaders(): array
-    {
-        return static::$allowedHeaders;
-    }
-
-    public static function headerIsAllowed(string $header): bool
-    {
-        return Str::is(static::getAllowedHeaders(), $header);
-    }
-
-    /**
-     * @return array<string>
-     */
-    public static function getSensitiveHeaders(): array
-    {
-        return static::$sensitiveHeaders;
-    }
-
-    public static function headerIsSensitive(string $header): bool
-    {
-        return Str::is(static::getSensitiveHeaders(), $header);
-    }
-
     protected function normalizeHeaders(array $headers): array
     {
-        return Arr::map(
-            $headers,
-            fn (string $header) => strtolower(trim($header)),
-        );
-    }
-
-    protected function recordHeaders(SpanInterface $span, Request|Response $http): SpanInterface
-    {
-        $prefix = match (true) {
-            $http instanceof Request => 'http.request.header.',
-            $http instanceof Response => 'http.response.header.',
-        };
-
-        foreach ($http->headers->all() as $key => $value) {
+        $normalized = [];
+        foreach ($headers as $key => $value) {
             $key = strtolower($key);
-
-            if (! static::headerIsAllowed($key)) {
-                continue;
-            }
-
-            $value = static::headerIsSensitive($key) ? ['*****'] : $value;
-
-            if (is_array($value)) {
-                $value = implode(', ', $value);
-            }
-
-            $span->setAttribute($prefix.$key, $value);
+            $normalized[$key] = is_array($value) ? implode(', ', $value) : (string) $value;
         }
 
-        return $span;
+        return $normalized;
+    }
+
+    /**
+     * Record allowed headers as span attributes.
+     */
+    protected function recordHeaders(SpanInterface $span, array $headers, string $prefix = 'http.request.header.'): void
+    {
+        $normalized = $this->normalizeHeaders($headers);
+        $allowedHeaders = config('otel.allowed_headers', []);
+        $sensitiveHeaders = config('otel.sensitive_headers', []);
+
+        foreach ($normalized as $key => $value) {
+            if ($this->headerIsAllowed($key, $allowedHeaders)) {
+                $attributeKey = $prefix . $key;
+
+                if ($this->headerIsSensitive($key, $sensitiveHeaders)) {
+                    $span->setAttribute($attributeKey, '***');
+                } else {
+                    $span->setAttribute($attributeKey, $value);
+                }
+            }
+        }
+    }
+
+    /**
+     * Check if header is allowed.
+     */
+    protected function headerIsAllowed(string $header, array $allowedHeaders): bool
+    {
+        return array_any($allowedHeaders, fn($pattern) => fnmatch($pattern, $header));
+    }
+
+    /**
+     * Check if header is sensitive.
+     */
+    protected function headerIsSensitive(string $header, array $sensitiveHeaders): bool
+    {
+        return array_any($sensitiveHeaders, fn($pattern) => fnmatch($pattern, $header));
     }
 }

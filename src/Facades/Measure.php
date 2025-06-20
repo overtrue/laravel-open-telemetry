@@ -1,30 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Overtrue\LaravelOpenTelemetry\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
-use OpenTelemetry\Context\ContextInterface;
-use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
+use OpenTelemetry\Context\Context;
+use OpenTelemetry\Context\Propagation\PropagationGetterInterface;
 use OpenTelemetry\Context\ScopeInterface;
-use Overtrue\LaravelOpenTelemetry\Support\SpanBuilder;
-use Overtrue\LaravelOpenTelemetry\Support\StartedSpan;
 
 /**
- * @method static SpanBuilder span(string $name, ?string $prefix = null)
- * @method static StartedSpan start(int|string $name, ?callable $callback = null)
- * @method static void end(?string $name = null)
+ * @method static \Overtrue\LaravelOpenTelemetry\Support\SpanBuilder span(string $spanName)
+ * @method static \Overtrue\LaravelOpenTelemetry\Support\StartedSpan start(string $spanName)
+ * @method static void end()
+ * @method static TracerInterface tracer()
  * @method static SpanInterface activeSpan()
  * @method static ScopeInterface|null activeScope()
- * @method static string|null traceId()
- * @method static TracerInterface tracer()
- * @method static TextMapPropagatorInterface propagator()
- * @method static array propagationHeaders(?ContextInterface $context = null)
- * @method static ContextInterface extractContextFromPropagationHeaders(array $headers)
- * @method static bool isRecording()
- * @method static array getStatus()
- * @method static void flush()
+ * @method static string traceId()
+ * @method static mixed propagator()
+ * @method static array propagationHeaders(Context $context = null)
+ * @method static Context extractContextFromPropagationHeaders(array $headers)
+ *
+ * @see \Overtrue\LaravelOpenTelemetry\Support\Measure
  */
 class Measure extends Facade
 {

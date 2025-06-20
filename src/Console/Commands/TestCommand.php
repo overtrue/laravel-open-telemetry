@@ -34,12 +34,21 @@ class TestCommand extends Command
             return Command::FAILURE;
         }
 
-        // 获取详细状态信息
+        // Detect running mode
+        $hasExtension = extension_loaded('opentelemetry');
+        $mode = $hasExtension ? 'Auto-Instrumentation' : 'Manual';
+
+        $this->info("🔧 Mode: <comment>{$mode}</comment>");
+        $this->info('📦 Extension: '.($hasExtension ? '<info>Loaded</info>' : '<comment>Not Available</comment>'));
+        $this->info('');
+
+        // Get detailed status information
         $status = Measure::getStatus();
 
         $this->info('📊 Current Status:');
         $this->line('  Recording: '.($status['is_recording'] ? '<info>Yes</info>' : '<comment>No</comment>'));
         $this->line("  TracerProvider: <comment>{$status['tracer_provider']['class']}</comment>");
+        $this->line('  Source: <comment>'.($status['tracer_provider']['source'] ?? 'Unknown').'</comment>');
         $this->line("  Active Spans: <info>{$status['active_spans_count']}</info>");
         $this->info('');
 
@@ -99,7 +108,7 @@ class TestCommand extends Command
         sleep(1);
 
         // End child span
-        Measure::end('Child Operation');
+        Measure::end();
         $this->info('Child span completed.');
 
         // Record event
@@ -115,7 +124,7 @@ class TestCommand extends Command
         $traceId = $rootSpan->span->getContext()->getTraceId();
 
         // End root span
-        Measure::end('Test Span');
+        Measure::end();
 
         // Output result
         $this->info('');
@@ -136,7 +145,10 @@ class TestCommand extends Command
             ]
         );
 
-        // 显示最终状态
+        // Check enhancement status
+        $this->checkEnhancementStatus();
+
+        // Display final status
         $finalStatus = Measure::getStatus();
         $this->info('');
         $this->info('📈 Final Status:');
@@ -159,5 +171,74 @@ class TestCommand extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Check enhancement status
+     */
+    private function checkEnhancementStatus(): void
+    {
+        $this->info('');
+        $this->info('🚀 Enhancement Status:');
+
+        // Check official package
+        $hasOfficialPackage = class_exists('OpenTelemetry\\Contrib\\Instrumentation\\Laravel\\LaravelInstrumentation');
+        $this->line('  Official Laravel Package: '.($hasOfficialPackage ? '<info>Installed</info>' : '<error>Not Installed</error>'));
+
+        // Check our enhancement features
+        $hasEnhancement = class_exists('Overtrue\\LaravelOpenTelemetry\\Support\\AutoInstrumentation\\LaravelInstrumentation');
+        $this->line('  Enhancement Classes: '.($hasEnhancement ? '<info>Available</info>' : '<error>Not Available</error>'));
+
+        // Check if _register.php is in autoload
+        $autoloadFilePath = base_path('vendor/composer/autoload_files.php');
+        $hasRegisterFile = false;
+        if (file_exists($autoloadFilePath)) {
+            $composerAutoload = file_get_contents($autoloadFilePath);
+            $hasRegisterFile = strpos($composerAutoload, '_register.php') !== false;
+        }
+        $this->line('  Auto Register File: '.($hasRegisterFile ? '<info>Loaded</info>' : '<comment>Not Detected</comment>'));
+
+        // Check Guzzle macro
+        $hasGuzzleMacro = \Illuminate\Http\Client\PendingRequest::hasMacro('withTrace');
+        $this->line('  Guzzle Trace Macro: '.($hasGuzzleMacro ? '<info>Registered</info>' : '<error>Not Registered</error>'));
+
+        // Check Watcher status
+        $this->info('');
+        $this->info('👀 Watchers Status:');
+        $watchers = config('otel.watchers', []);
+        if (empty($watchers)) {
+            $this->line('  <comment>No watchers configured</comment>');
+        } else {
+            foreach ($watchers as $watcherClass) {
+                $className = class_basename($watcherClass);
+                $exists = class_exists($watcherClass);
+                $status = $exists ? '<info>Enabled</info>' : '<error>Class not found</error>';
+                $this->line("  {$className}: {$status}");
+            }
+        }
+
+        // Check if Watcher classes exist
+        $watcherClasses = [
+            'ExceptionWatcher' => 'Overtrue\\LaravelOpenTelemetry\\Watchers\\ExceptionWatcher',
+            'AuthenticateWatcher' => 'Overtrue\\LaravelOpenTelemetry\\Watchers\\AuthenticateWatcher',
+            'EventWatcher' => 'Overtrue\\LaravelOpenTelemetry\\Watchers\\EventWatcher',
+            'QueueWatcher' => 'Overtrue\\LaravelOpenTelemetry\\Watchers\\QueueWatcher',
+            'RedisWatcher' => 'Overtrue\\LaravelOpenTelemetry\\Watchers\\RedisWatcher',
+        ];
+
+        $this->info('');
+        $this->info('🔍 Watcher Classes Status:');
+        foreach ($watcherClasses as $name => $class) {
+            $exists = class_exists($class);
+            $this->line("  {$name}: ".($exists ? '<info>Available</info>' : '<error>Not Available</error>'));
+        }
+
+        if (! $hasOfficialPackage) {
+            $this->warn('⚠️  Recommend installing the official opentelemetry-auto-laravel package for full functionality');
+        }
+
+        if (! $hasEnhancement) {
+            $this->error('❌ Enhancement classes not available, please check package installation');
+        }
     }
 }

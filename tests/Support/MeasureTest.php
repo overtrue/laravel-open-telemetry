@@ -39,10 +39,10 @@ class MeasureTest extends TestCase
         $mockBuilder = Mockery::mock(SpanBuilder::class);
         $mockScope = Mockery::mock(ScopeInterface::class);
         $mockSpan = Mockery::mock(SpanInterface::class);
+        $mockStartedSpan = Mockery::mock(StartedSpan::class);
 
         $measure->shouldReceive('span')->withAnyArgs()->andReturn($mockBuilder)->once();
-        $mockBuilder->shouldReceive('start')->andReturn($mockSpan)->once();
-        $mockSpan->shouldReceive('activate')->andReturn($mockScope)->once();
+        $mockBuilder->shouldReceive('start')->andReturn($mockStartedSpan)->once();
 
         Measure::swap($measure);
 
@@ -58,18 +58,35 @@ class MeasureTest extends TestCase
         $mockBuilder = Mockery::mock(SpanBuilder::class);
         $mockScope = Mockery::mock(ScopeInterface::class);
         $mockSpan = Mockery::mock(SpanInterface::class);
+        $mockStartedSpan = Mockery::mock(StartedSpan::class);
 
         $measure->shouldReceive('span')->andReturn($mockBuilder)->once();
-        $mockBuilder->shouldReceive('start')->andReturn($mockSpan)->once();
-        $mockSpan->shouldReceive('activate')->andReturn($mockScope)->once();
+        $mockBuilder->shouldReceive('start')->andReturn($mockStartedSpan)->once();
 
-        $mockSpan->shouldReceive('end')->andReturn($mockScope)->once();
-        $mockScope->shouldReceive('detach')->once();
+        $mockStartedSpan->shouldReceive('end')->once();
 
         Measure::swap($measure);
 
         Measure::start('test');
         Measure::end();
+    }
+
+    public function test_end_span_when_no_current_span()
+    {
+        $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
+
+        // Set currentSpan to null using reflection
+        $reflection = new \ReflectionClass($measure);
+        $property = $reflection->getProperty('currentSpan');
+        $property->setAccessible(true);
+        $property->setValue(null, null);
+
+        Measure::swap($measure);
+
+        // Should not throw any exception when ending without a current span
+        Measure::end();
+
+        $this->assertTrue(true);
     }
 
     public function test_get_tracer()

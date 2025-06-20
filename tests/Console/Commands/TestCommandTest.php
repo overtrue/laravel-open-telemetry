@@ -20,7 +20,7 @@ class TestCommandTest extends TestCase
     {
         parent::setUp();
 
-        // 确保 OpenTelemetry 已启用
+        // Ensure OpenTelemetry is enabled
         config(['otel.enabled' => true]);
 
         // Mock Tracer
@@ -32,7 +32,7 @@ class TestCommandTest extends TestCase
         $status = Mockery::mock('status');
         $status->shouldReceive('getCode')->andReturn(StatusCode::STATUS_OK);
 
-        // 设置 span 的期望行为
+        // Set expected behavior for span
         $span->shouldReceive('setAttribute')->andReturnSelf();
         $span->shouldReceive('addEvent')->andReturnSelf();
         $span->shouldReceive('setStatus')->andReturnSelf();
@@ -42,22 +42,22 @@ class TestCommandTest extends TestCase
         $span->shouldReceive('activate')->andReturn($scope);
         $span->shouldReceive('getStatus')->andReturn($status);
 
-        // 设置 span context 的期望行为
+        // Set expected behavior for span context
         $spanContext->shouldReceive('getTraceId')->andReturn('test-trace-id');
 
-        // 设置 span builder 的期望行为
+        // Set expected behavior for span builder
         $spanBuilder->shouldReceive('start')->andReturn($span);
 
-        // 设置 tracer 的期望行为
+        // Set expected behavior for tracer
         $tracer->shouldReceive('spanBuilder')->andReturn($spanBuilder);
 
-        // 替换 Measure facade 的方法
+        // Replace Measure facade methods
         Measure::shouldReceive('tracer')->andReturn($tracer);
         Measure::shouldReceive('activeSpan')->andReturn($span);
         Measure::shouldReceive('start')->andReturn(new StartedSpan($span, $scope));
         Measure::shouldReceive('end')->andReturnNull();
 
-        // 新增的方法
+        // Additional methods
         Measure::shouldReceive('getStatus')->andReturn([
             'is_recording' => true,
             'active_spans_count' => 0,
@@ -73,13 +73,13 @@ class TestCommandTest extends TestCase
 
     public function test_command_creates_test_span()
     {
-        // 执行命令
+        // Execute command
         $result = Artisan::call('otel:test');
 
-        // 验证命令执行成功
+        // Verify command executed successfully
         $this->assertEquals(0, $result);
 
-        // 验证输出包含预期的信息（更新为新的输出格式）
+        // Verify output contains expected information (updated to new output format)
         $output = Artisan::output();
         $this->assertStringContainsString('=== OpenTelemetry Test Command ===', $output);
         $this->assertStringContainsString('✅ Test completed!', $output);
@@ -88,49 +88,49 @@ class TestCommandTest extends TestCase
 
     public function test_command_creates_span_with_correct_attributes()
     {
-        // 执行命令
+        // Execute command
         Artisan::call('otel:test');
 
-        // 获取当前活动的 span
+        // Get current active span
         $span = Measure::activeSpan();
 
-        // 验证 span 属性
+        // Verify span attributes
         $this->assertEquals('test_value', $span->getAttribute('test.attribute'));
     }
 
     public function test_command_creates_child_span()
     {
-        // 执行命令
+        // Execute command
         Artisan::call('otel:test');
 
-        // 获取当前活动的 span
+        // Get current active span
         $span = Measure::activeSpan();
 
-        // 验证子 span 属性
+        // Verify child span attributes
         $this->assertEquals('test_value', $span->getAttribute('child.attribute'));
     }
 
     public function test_command_sets_correct_status()
     {
-        // 执行命令
+        // Execute command
         Artisan::call('otel:test');
 
-        // 获取当前活动的 span
+        // Get current active span
         $span = Measure::activeSpan();
 
-        // 验证状态
+        // Verify status
         $this->assertEquals(StatusCode::STATUS_OK, $span->getStatus()->getCode());
     }
 
     public function test_command_outputs_correct_table()
     {
-        // 执行命令
+        // Execute command
         Artisan::call('otel:test');
 
-        // 获取输出
+        // Get output
         $output = Artisan::output();
 
-        // 验证表格输出
+        // Verify table output
         $this->assertStringContainsString('Span Name', $output);
         $this->assertStringContainsString('Status', $output);
         $this->assertStringContainsString('Attributes', $output);
@@ -140,13 +140,13 @@ class TestCommandTest extends TestCase
 
     public function test_command_handles_otel_disabled()
     {
-        // 禁用 OpenTelemetry
+        // Disable OpenTelemetry
         config(['otel.enabled' => false]);
 
-        // 清除所有 mock
+        // Clear all mocks
         Mockery::close();
 
-        // 重新设置 mock，但这次 Measure facade 的所有方法都返回 null
+        // Reset mocks, but this time all Measure facade methods return null
         Measure::shouldReceive('tracer')->andReturnNull();
         Measure::shouldReceive('activeSpan')->andReturnNull();
         Measure::shouldReceive('start')->andReturnNull();
@@ -163,13 +163,13 @@ class TestCommandTest extends TestCase
         ]);
         Measure::shouldReceive('isRecording')->andReturn(false);
 
-        // 执行命令
+        // Execute command
         $result = Artisan::call('otel:test');
 
-        // 验证命令现在返回失败状态（根据新的逻辑）
+        // Verify command now returns failure status (based on new logic)
         $this->assertEquals(1, $result);
 
-        // 验证输出包含错误信息
+        // Verify output contains error information
         $output = Artisan::output();
         $this->assertStringContainsString('OpenTelemetry is disabled in config', $output);
     }

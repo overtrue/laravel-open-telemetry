@@ -5,35 +5,60 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Log\Events\MessageLogged;
-use OpenTelemetry\API\Trace\StatusCode;
-use OpenTelemetry\SemConv\TraceAttributes;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
 use Throwable;
 
-class ExceptionWatcher implements Watcher
+/**
+ * Exception Watcher
+ *
+ * Listen to exception handling, record exception type, message, file, and line number
+ */
+class ExceptionWatcher extends Watcher
 {
-    public function register(Application $app): void
-    {
-        $app['events']->listen(MessageLogged::class, $this->recordException(...));
+    public function __construct(
+        private readonly CachedInstrumentation $instrumentation,
+    ) {
     }
 
-    public function recordException(MessageLogged $log): void
+    public function register(Application $app): void
     {
-        if (! isset($log->context['exception']) ||
-            ! $log->context['exception'] instanceof Throwable) {
+        $app['events']->listen('Illuminate\Log\Events\MessageLogged', [$this, 'recordException']);
+    }
+
+    public function recordException($event): void
+    {
+        // Only handle error and critical level logs
+        if (! in_array($event->level, ['error', 'critical', 'emergency'])) {
             return;
         }
 
-        $exception = $log->context['exception'];
-        $scope = Measure::activeScope();
-
-        if (! $scope) {
+        // Check if exception information is included
+        $exception = $event->context['exception'] ?? null;
+        if (! $exception instanceof Throwable) {
             return;
         }
 
-        $span = Measure::activeSpan();
-        $span->recordException($exception, [TraceAttributes::EXCEPTION_ESCAPED => true]);
-        $span->setStatus(StatusCode::STATUS_ERROR, $exception->getMessage());
+        $span = $this->instrumentation
+            ->tracer()
+            ->spanBuilder('exception')
+            ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->startSpan();
+
+        $span->recordException($exception, [
+            'exception.escaped' => true,
+        ]);
+
+        $span->setAttributes([
+            'exception.type' => get_class($exception),
+            'exception.message' => $exception->getMessage(),
+            'exception.file' => $exception->getFile(),
+            'exception.line' => $exception->getLine(),
+            'log.level' => $event->level,
+            'log.channel' => $event->context['log_channel'] ?? 'unknown',
+        ]);
+
+        $span->end();
     }
 }

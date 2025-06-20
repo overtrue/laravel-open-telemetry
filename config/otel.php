@@ -1,43 +1,32 @@
 <?php
 
-use Overtrue\LaravelOpenTelemetry\Watchers;
-
 return [
-    /**
-     * Enable or disable the OpenTelemetry Laravel Extension.
-     */
-    'enabled' => env('OTEL_ENABLED', true),
 
     /**
-     * Auto Register the MeasureRequest middleware.
+     * The name of the header that will be used to pass the trace id in the response.
+     * if set to `null`, the header will not be added to the response.
      */
-    'automatically_trace_requests' => env('OTEL_AUTO_TRACE_REQUESTS', true),
+    'response_trace_header_name' => env('OTEL_RESPONSE_TRACE_HEADER_NAME', 'X-Trace-Id'),
 
     /**
-     * SDK Configuration
+     * Watchers Configuration
+     * Note: Starting from v2.0, we use OpenTelemetry's official auto-instrumentation
+     * Most tracing functionality is provided by the opentelemetry-auto-laravel package
+     * This package provides the following additional Watcher functionality:
+     *
+     * Available Watcher classes:
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class
      */
-    'sdk' => [
-        'auto_initialize' => env('OTEL_SDK_AUTO_INITIALIZE', true),
-        'service_name' => env('OTEL_SERVICE_NAME', config('app.name', 'laravel-app')),
-        'service_version' => env('OTEL_SERVICE_VERSION', '1.0.0'),
-    ],
-
-    /**
-     * Exporter Configuration
-     */
-    'exporters' => [
-        'traces' => env('OTEL_TRACES_EXPORTER', 'console'),
-        'metrics' => env('OTEL_METRICS_EXPORTER', 'none'),
-        'logs' => env('OTEL_LOGS_EXPORTER', 'none'),
-    ],
-
-    /**
-     * OTLP Exporter Configuration
-     */
-    'otlp' => [
-        'endpoint' => env('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4318'),
-        'headers' => env('OTEL_EXPORTER_OTLP_HEADERS', ''),
-        'timeout' => env('OTEL_EXPORTER_OTLP_TIMEOUT', 10),
+    'watchers' => [
+        \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class,
     ],
 
     /**
@@ -68,22 +57,4 @@ return [
         '_debugbar*',
         'health*',
     ]))),
-
-    /**
-     * The name of the header that will be used to pass the trace id in the response.
-     * if set to `null`, the header will not be added to the response.
-     */
-    'response_trace_header_name' => env('OTEL_RESPONSE_TRACE_HEADER_NAME', 'X-Trace-Id'),
-
-    /**
-     * Watchers to be registered.
-     */
-    'watchers' => [
-        Watchers\ExceptionWatcher::class,
-        Watchers\AuthenticateWatcher::class,
-        Watchers\EventWatcher::class,
-        Watchers\QueueWatcher::class,
-        Watchers\RedisWatcher::class,
-        // App\Trace\Watchers\YourCustomWatcher::class, // Add your custom watcher here.
-    ],
 ];

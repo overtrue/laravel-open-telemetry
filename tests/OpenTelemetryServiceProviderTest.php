@@ -2,135 +2,135 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
-use Illuminate\Foundation\Http\Kernel;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Facades\Log;
 use Mockery;
-use Overtrue\LaravelOpenTelemetry\Middlewares\MeasureRequest;
+use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
-use ReflectionClass;
 
 class OpenTelemetryServiceProviderTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // 确保 OpenTelemetry 已启用
-        config(['otel.enabled' => true]);
-    }
-
     public function test_provider_registers_measure_singleton()
     {
-        // 创建服务提供者
+        // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
 
-        // 注册服务
+        // Register services
         $provider->register();
 
-        // 验证 Measure 单例已注册
+        // Verify Measure singleton is registered
         $this->assertTrue($this->app->bound(Measure::class));
         $this->assertInstanceOf(Measure::class, $this->app->make(Measure::class));
     }
 
-    public function test_provider_injects_middleware_when_enabled()
+    public function test_provider_merges_config()
     {
-        // 配置自动注入中间件
-        config(['otel.automatically_trace_requests' => true]);
-
-        // Mock Kernel
-        $kernel = Mockery::mock(Kernel::class);
-        $kernel->shouldReceive('hasMiddleware')->with(MeasureRequest::class)->once()->andReturn(false);
-        $kernel->shouldReceive('prependMiddleware')->with(MeasureRequest::class)->once();
-
-        // 创建服务提供者
+        // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
 
-        // 使用反射调用受保护的方法
-        $reflection = new ReflectionClass($provider);
-        $method = $reflection->getMethod('injectHttpMiddleware');
-        $method->setAccessible(true);
-        $method->invoke($provider, $kernel);
+        // Register services
+        $provider->register();
 
-        // 验证 mock 预期
-        $this->assertTrue(true); // 如果没有异常抛出，说明测试通过
+        // Verify config is merged
+        $this->assertNotNull(config('otel'));
+        $this->assertIsArray(config('otel.watchers'));
+        $this->assertIsString(config('otel.response_trace_header_name'));
     }
 
-    public function test_provider_skips_middleware_injection_when_disabled()
+    public function test_provider_publishes_config()
     {
-        // 配置禁用自动注入中间件
-        config(['otel.automatically_trace_requests' => false]);
-
-        // 创建服务提供者
+        // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
 
-        // 启动服务 - 当 automatically_trace_requests 为 false 时，不应该调用 injectHttpMiddleware
+        // Boot services
         $provider->boot();
 
-        // 验证测试通过（没有调用中间件注入）
-        $this->assertTrue(true);
+        // Get published config files
+        $publishes = $provider::$publishes[OpenTelemetryServiceProvider::class] ?? [];
+
+        // Verify config is published
+        $this->assertNotEmpty($publishes);
+        $expectedConfigPath = $this->app->configPath('otel.php');
+        $this->assertContains($expectedConfigPath, array_values($publishes));
     }
 
-    public function test_provider_injects_middleware_when_enabled_directly()
+    public function test_provider_registers_guzzle_macro()
     {
-        // 配置启用自动注入中间件
-        config(['otel.automatically_trace_requests' => true]);
-
-        // Mock Kernel 用于直接测试 injectHttpMiddleware
-        $kernel = Mockery::mock(Kernel::class);
-        $kernel->shouldReceive('hasMiddleware')->with(MeasureRequest::class)->once()->andReturn(false);
-        $kernel->shouldReceive('prependMiddleware')->with(MeasureRequest::class)->once();
-
-        // 创建服务提供者
+        // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
 
-        // 使用反射调用受保护的方法
-        $reflection = new ReflectionClass($provider);
-        $method = $reflection->getMethod('injectHttpMiddleware');
-        $method->setAccessible(true);
-        $method->invoke($provider, $kernel);
-
-        // 验证 mock 预期
-        $this->assertTrue(true); // 如果没有异常抛出，说明测试通过
-    }
-
-    public function test_provider_registers_watchers()
-    {
-        // 配置观察者
-        config(['otel.watchers' => []]);
-
-        // 创建服务提供者
-        $provider = new OpenTelemetryServiceProvider($this->app);
-
-        // 启动服务
+        // Boot services
         $provider->boot();
 
-        // 验证测试通过（没有观察者需要注册）
-        $this->assertTrue(true);
+        // Verify Guzzle macro is registered
+        $this->assertTrue(PendingRequest::hasMacro('withTrace'));
     }
 
-    public function test_provider_skips_registration_when_disabled()
+    public function test_provider_registers_console_commands()
     {
-        // 直接测试服务提供者的逻辑而不是依赖容器状态
+        // Set application as running in console
+        $this->app->instance('env', 'testing');
 
-        // 临时禁用 OpenTelemetry
-        $originalEnabled = config('otel.enabled');
-        config(['otel.enabled' => false]);
+        // Create service provider
+        $provider = new OpenTelemetryServiceProvider($this->app);
 
-        try {
-            // 创建服务提供者
-            $provider = new OpenTelemetryServiceProvider($this->app);
+        // Use reflection to test protected method
+        $reflection = new \ReflectionClass($provider);
+        $method = $reflection->getMethod('registerCommands');
+        $method->setAccessible(true);
 
-            // 调用 register 方法
-            $provider->register();
+        // Mock the commands method
+        $provider = Mockery::mock(OpenTelemetryServiceProvider::class, [$this->app])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
 
-            // 当 OpenTelemetry 禁用时，register 方法应该早期返回
-            // 我们通过检查是否没有抛出异常来验证这一点
-            $this->assertTrue(true);
+        $provider->shouldReceive('commands')
+            ->with([TestCommand::class])
+            ->once();
 
-        } finally {
-            // 恢复原始配置
-            config(['otel.enabled' => $originalEnabled]);
-        }
+        $method->invoke($provider);
+
+        // Verify the expectation was met
+        $this->assertTrue(true); // Mockery will fail if expectation not met
+    }
+
+    public function test_guzzle_macro_returns_request_with_middleware()
+    {
+        // Create service provider and boot it
+        $provider = new OpenTelemetryServiceProvider($this->app);
+        $provider->boot();
+
+        // Create a PendingRequest instance
+        $request = new PendingRequest();
+
+        // Use the withTrace macro
+        $requestWithTrace = $request->withTrace();
+
+        // Verify it returns a PendingRequest instance
+        $this->assertInstanceOf(PendingRequest::class, $requestWithTrace);
+    }
+
+    public function test_provider_logs_startup_and_registration()
+    {
+        // Mock Log facade
+        Log::shouldReceive('debug')
+            ->with('[laravel-open-telemetry] started', Mockery::type('array'))
+            ->once();
+
+        Log::shouldReceive('debug')
+            ->with('[laravel-open-telemetry] registered.')
+            ->once();
+
+        // Create service provider
+        $provider = new OpenTelemetryServiceProvider($this->app);
+
+        // Register and boot
+        $provider->register();
+        $provider->boot();
+
+        // Verify the expectation was met
+        $this->assertTrue(true); // Mockery will fail if expectation not met
     }
 
     protected function tearDown(): void

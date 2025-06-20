@@ -6,7 +6,10 @@
     "autoload": {
         "psr-4": {
             "Overtrue\\LaravelOpenTelemetry\\": "src/"
-        }
+        },
+        "files": [
+            "_register.php"
+        ]
     },
     "authors": [
         {
@@ -16,6 +19,7 @@
     ],
     "require": {
         "php": ">=8.4",
+        "ext-opentelemetry": "*",
         "laravel/framework": "^10.0|^11.0|^12.0",
         "open-telemetry/api": "^1.0",
         "open-telemetry/sdk": "^1.0",
@@ -27,9 +31,7 @@
         "laravel/pint": "^1.15",
         "spatie/test-time": "^1.3"
     },
-    "suggest": {
-        "ext-opentelemetry": "Required for zero-code instrumentation"
-    },
+    "suggest": {},
     "autoload-dev": {
         "psr-4": {
             "Overtrue\\LaravelOpenTelemetry\\Tests\\": "tests/"
