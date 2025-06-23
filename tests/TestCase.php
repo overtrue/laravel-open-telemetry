@@ -2,10 +2,16 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 
-abstract class TestCase extends \Orchestra\Testbench\TestCase
+abstract class TestCase extends OrchestraTestCase
 {
+        protected function setUp(): void
+    {
+        parent::setUp();
+    }
+
     protected function getPackageProviders($app): array
     {
         return [
@@ -48,5 +54,11 @@ abstract class TestCase extends \Orchestra\Testbench\TestCase
     protected function defineEnvironment($app)
     {
         $app['config']->set('otel.enabled', true);
+    }
+
+        protected function getEnvironmentSetUp($app): void
+    {
+        // Setup the application environment for testing
+        config()->set('database.default', 'testing');
     }
 }

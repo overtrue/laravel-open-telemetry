@@ -3,7 +3,6 @@
 namespace Overtrue\LaravelOpenTelemetry\Tests\Hooks\Illuminate\Http;
 
 use Mockery;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Hooks\Illuminate\Http\Kernel;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
@@ -25,9 +24,8 @@ class KernelTest extends TestCase
         $expectedTraceId = '12345678901234567890123456789012';
         Measure::shouldReceive('traceId')->andReturn($expectedTraceId);
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化而不是通过 hook() 方法
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -49,9 +47,8 @@ class KernelTest extends TestCase
         // Set configuration to null
         config(['otel.response_trace_header_name' => null]);
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -73,9 +70,8 @@ class KernelTest extends TestCase
         // Set configuration to empty string
         config(['otel.response_trace_header_name' => '']);
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -100,9 +96,8 @@ class KernelTest extends TestCase
         // Mock empty trace ID
         Measure::shouldReceive('traceId')->andReturn('');
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -128,9 +123,8 @@ class KernelTest extends TestCase
         $allZerosTraceId = '00000000000000000000000000000000';
         Measure::shouldReceive('traceId')->andReturn($allZerosTraceId);
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -155,9 +149,8 @@ class KernelTest extends TestCase
         // Mock Measure::traceId() to throw exception
         Measure::shouldReceive('traceId')->andThrow(new \Exception('Test exception'));
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
@@ -183,9 +176,8 @@ class KernelTest extends TestCase
         $expectedTraceId = '98765432109876543210987654321098';
         Measure::shouldReceive('traceId')->andReturn($expectedTraceId);
 
-        // Create hook
-        $instrumentation = new CachedInstrumentation('test');
-        $hook = Kernel::hook($instrumentation);
+        // Create hook - 在测试环境中直接实例化
+        $hook = new Kernel();
 
         // Create response
         $response = new Response;
