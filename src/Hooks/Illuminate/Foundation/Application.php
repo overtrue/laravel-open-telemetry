@@ -16,7 +16,6 @@ class Application implements LaravelHook
 
     public function instrument(): void
     {
-        file_put_contents('/tmp/telemetry.log', 111);
         hook(
             class: FoundationApplication::class,
             function: 'boot',
