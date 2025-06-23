@@ -234,7 +234,7 @@ class KernelTest extends TestCase
         $method->setAccessible(true);
 
         // Mock global event function
-        if (!function_exists('event')) {
+        if (! function_exists('event')) {
             eval('function event($name) { /* Mock implementation */ }');
         }
 
