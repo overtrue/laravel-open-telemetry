@@ -91,7 +91,7 @@ class Kernel implements LaravelHook
                 event('kernel.handling');
             }
         } catch (\Throwable $e) {
-            error_log("FrankenPHP worker request start error: " . $e->getMessage());
+            error_log('FrankenPHP worker request start error: '.$e->getMessage());
         }
     }
 
@@ -109,7 +109,7 @@ class Kernel implements LaravelHook
             // 清理可能残留的资源
             $this->cleanupWorkerRequestResources();
         } catch (\Throwable $e) {
-            error_log("FrankenPHP worker request end error: " . $e->getMessage());
+            error_log('FrankenPHP worker request end error: '.$e->getMessage());
         }
     }
 
@@ -143,7 +143,7 @@ class Kernel implements LaravelHook
             // 清理可能的全局状态
             $this->resetGlobalState();
         } catch (\Throwable $e) {
-            error_log("FrankenPHP worker cleanup error: " . $e->getMessage());
+            error_log('FrankenPHP worker cleanup error: '.$e->getMessage());
         }
     }
 

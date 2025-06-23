@@ -25,7 +25,7 @@ class KernelTest extends TestCase
         Measure::shouldReceive('traceId')->andReturn($expectedTraceId);
 
         // Create hook - 在测试环境中直接实例化而不是通过 hook() 方法
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -48,7 +48,7 @@ class KernelTest extends TestCase
         config(['otel.response_trace_header_name' => null]);
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -71,7 +71,7 @@ class KernelTest extends TestCase
         config(['otel.response_trace_header_name' => '']);
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -97,7 +97,7 @@ class KernelTest extends TestCase
         Measure::shouldReceive('traceId')->andReturn('');
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -124,7 +124,7 @@ class KernelTest extends TestCase
         Measure::shouldReceive('traceId')->andReturn($allZerosTraceId);
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -150,7 +150,7 @@ class KernelTest extends TestCase
         Measure::shouldReceive('traceId')->andThrow(new \Exception('Test exception'));
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;
@@ -177,7 +177,7 @@ class KernelTest extends TestCase
         Measure::shouldReceive('traceId')->andReturn($expectedTraceId);
 
         // Create hook - 在测试环境中直接实例化
-        $hook = new Kernel();
+        $hook = new Kernel;
 
         // Create response
         $response = new Response;

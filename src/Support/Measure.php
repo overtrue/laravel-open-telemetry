@@ -94,7 +94,7 @@ class Measure
      */
     public function cleanupWorkerState(): void
     {
-        if (!$this->isFrankenPhpWorkerMode()) {
+        if (! $this->isFrankenPhpWorkerMode()) {
             return;
         }
 
@@ -119,7 +119,7 @@ class Measure
 
         } catch (\Throwable $e) {
             // 静默处理清理错误
-            error_log("OpenTelemetry worker cleanup error: " . $e->getMessage());
+            error_log('OpenTelemetry worker cleanup error: '.$e->getMessage());
         }
     }
 
@@ -128,7 +128,7 @@ class Measure
      */
     public function getWorkerStatus(): array
     {
-        if (!$this->isFrankenPhpWorkerMode()) {
+        if (! $this->isFrankenPhpWorkerMode()) {
             return ['worker_mode' => false];
         }
 

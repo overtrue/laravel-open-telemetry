@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
@@ -18,6 +17,7 @@ use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
 class FrankenPhpWorkerWatcher extends Watcher
 {
     private static int $requestCount = 0;
+
     private static array $initialMemoryState = [];
 
     public function __construct(
@@ -27,7 +27,7 @@ class FrankenPhpWorkerWatcher extends Watcher
     public function register(Application $app): void
     {
         // 只在 FrankenPHP worker 模式下注册
-        if (!$this->isFrankenPhpWorkerMode()) {
+        if (! $this->isFrankenPhpWorkerMode()) {
             return;
         }
 
@@ -162,7 +162,7 @@ class FrankenPhpWorkerWatcher extends Watcher
 
         } catch (\Throwable $e) {
             // 静默处理清理错误，避免影响正常请求
-            error_log("OpenTelemetry cleanup error in FrankenPHP worker: " . $e->getMessage());
+            error_log('OpenTelemetry cleanup error in FrankenPHP worker: '.$e->getMessage());
         }
     }
 

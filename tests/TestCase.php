@@ -7,7 +7,7 @@ use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 
 abstract class TestCase extends OrchestraTestCase
 {
-        protected function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
     }
@@ -56,7 +56,7 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('otel.enabled', true);
     }
 
-        protected function getEnvironmentSetUp($app): void
+    protected function getEnvironmentSetUp($app): void
     {
         // Setup the application environment for testing
         config()->set('database.default', 'testing');

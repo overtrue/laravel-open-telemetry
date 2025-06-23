@@ -84,17 +84,18 @@ class FrankenPhpWorkerStatusCommand extends Command
 
         $workerStatus = Measure::getWorkerStatus();
 
-        if (!$workerStatus['worker_mode']) {
+        if (! $workerStatus['worker_mode']) {
             $this->line('  ⚠️  Not running in FrankenPHP worker mode');
             $this->line('');
+
             return;
         }
 
-        $this->line("  🔄 Worker Mode: <info>Active</info>");
+        $this->line('  🔄 Worker Mode: <info>Active</info>');
         $this->line("  🆔 Process ID: <info>{$workerStatus['pid']}</info>");
-        $this->line("  📊 Memory Usage: <info>" . $this->formatBytes($workerStatus['memory_usage']) . "</info>");
-        $this->line("  📈 Peak Memory: <info>" . $this->formatBytes($workerStatus['peak_memory']) . "</info>");
-        $this->line("  🎯 Current Span Recording: <info>" . ($workerStatus['current_span_recording'] ? 'Yes' : 'No') . "</info>");
+        $this->line('  📊 Memory Usage: <info>'.$this->formatBytes($workerStatus['memory_usage']).'</info>');
+        $this->line('  📈 Peak Memory: <info>'.$this->formatBytes($workerStatus['peak_memory']).'</info>');
+        $this->line('  🎯 Current Span Recording: <info>'.($workerStatus['current_span_recording'] ? 'Yes' : 'No').'</info>');
         $this->line("  🔗 Trace ID: <info>{$workerStatus['trace_id']}</info>");
 
         $this->line('');
@@ -128,7 +129,7 @@ class FrankenPhpWorkerStatusCommand extends Command
      */
     private function displayWorkerStats(): void
     {
-        if (!class_exists(FrankenPhpWorkerWatcher::class)) {
+        if (! class_exists(FrankenPhpWorkerWatcher::class)) {
             return;
         }
 
@@ -138,14 +139,14 @@ class FrankenPhpWorkerStatusCommand extends Command
             $stats = FrankenPhpWorkerWatcher::getWorkerStats();
 
             $this->line("  📈 Request Count: <info>{$stats['request_count']}</info>");
-            $this->line("  💾 Current Memory: <info>" . $this->formatBytes($stats['current_memory']) . "</info>");
-            $this->line("  📊 Peak Memory: <info>" . $this->formatBytes($stats['peak_memory']) . "</info>");
-            $this->line("  🔺 Memory Increase: <info>" . $this->formatBytes($stats['memory_increase']) . "</info>");
-            $this->line("  🏁 Initial Memory: <info>" . $this->formatBytes($stats['initial_memory']) . "</info>");
+            $this->line('  💾 Current Memory: <info>'.$this->formatBytes($stats['current_memory']).'</info>');
+            $this->line('  📊 Peak Memory: <info>'.$this->formatBytes($stats['peak_memory']).'</info>');
+            $this->line('  🔺 Memory Increase: <info>'.$this->formatBytes($stats['memory_increase']).'</info>');
+            $this->line('  🏁 Initial Memory: <info>'.$this->formatBytes($stats['initial_memory']).'</info>');
 
             // 内存增长警告
             if ($stats['memory_increase'] > 50 * 1024 * 1024) { // 50MB
-                $this->warn("  ⚠️  High memory increase detected!");
+                $this->warn('  ⚠️  High memory increase detected!');
             }
 
         } catch (\Throwable $e) {
@@ -167,8 +168,8 @@ class FrankenPhpWorkerStatusCommand extends Command
         $peakMemory = memory_get_peak_usage(true);
 
         $this->line("  📊 Memory Limit: <info>{$memoryLimit}</info>");
-        $this->line("  📈 Current Usage: <info>" . $this->formatBytes($currentMemory) . "</info>");
-        $this->line("  🔝 Peak Usage: <info>" . $this->formatBytes($peakMemory) . "</info>");
+        $this->line('  📈 Current Usage: <info>'.$this->formatBytes($currentMemory).'</info>');
+        $this->line('  🔝 Peak Usage: <info>'.$this->formatBytes($peakMemory).'</info>');
 
         // 计算内存使用率
         if ($memoryLimit !== '-1') {
@@ -178,7 +179,7 @@ class FrankenPhpWorkerStatusCommand extends Command
                 $this->line("  📊 Usage Percentage: <info>{$usagePercent}%</info>");
 
                 if ($usagePercent > 80) {
-                    $this->warn("  ⚠️  High memory usage detected!");
+                    $this->warn('  ⚠️  High memory usage detected!');
                 }
             }
         }
@@ -222,7 +223,7 @@ class FrankenPhpWorkerStatusCommand extends Command
 
         $bytes /= (1 << (10 * $pow));
 
-        return round($bytes, 2) . ' ' . $units[$pow];
+        return round($bytes, 2).' '.$units[$pow];
     }
 
     /**
