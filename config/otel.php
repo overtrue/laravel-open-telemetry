@@ -20,6 +20,7 @@ return [
      * - \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class
      */
     'watchers' => [
         \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
@@ -27,6 +28,7 @@ return [
         \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class,
     ],
 
     /**

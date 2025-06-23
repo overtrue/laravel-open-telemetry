@@ -6,6 +6,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
+use Overtrue\LaravelOpenTelemetry\Console\Commands\FrankenPhpWorkerStatusCommand;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
 
@@ -86,7 +87,10 @@ class OpenTelemetryServiceProviderTest extends TestCase
             ->shouldAllowMockingProtectedMethods();
 
         $provider->shouldReceive('commands')
-            ->with([TestCommand::class])
+            ->with([
+                TestCommand::class,
+                FrankenPhpWorkerStatusCommand::class,
+            ])
             ->once();
 
         $method->invoke($provider);

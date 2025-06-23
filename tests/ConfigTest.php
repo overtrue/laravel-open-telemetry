@@ -46,6 +46,7 @@ class ConfigTest extends TestCase
             \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class,
+            \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class,
         ];
 
         $this->assertEquals($expectedWatchers, $config['watchers']);

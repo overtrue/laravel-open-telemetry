@@ -1,0 +1,135 @@
+# Laravel OpenTelemetry Project - Cursor Rules
+
+这套 Cursor rule 适用于 Laravel OpenTelemetry 项目的所有编程任务，要求工程师以高级工程师的视角，严格按照流程执行任务，确保代码改动精准、高效，且不会引入问题或不必要的复杂性。
+
+## 核心目标
+
+确保代码改动精准、高效，且不会引入问题或不必要的复杂性，特别关注 OpenTelemetry 性能监控和 FrankenPHP Worker 模式的特殊需求。
+
+## 规则的五个关键步骤
+
+### 1. 明确任务范围
+- 在写代码前，先分析任务，明确目标
+- 制定清晰的计划，列出需要修改的函数、模块或组件，并说明原因
+- 特别关注是否涉及 OpenTelemetry 追踪、FrankenPHP Worker 模式或内存管理
+- 只有在计划清晰且经过深思熟虑后，才开始写代码
+
+### 2. 精准定位代码修改点
+- 确定需要修改的具体文件和代码行
+- 避免无关文件的改动，若涉及多个文件，需明确说明每个文件的改动理由
+- 除非任务明确要求，否则不创建新抽象或重构代码
+- 特别注意 Watcher、Hook 和 Support 类的职责边界
+
+### 3. 最小化、隔离化的代码改动
+- 只编写任务直接所需的代码
+- 避免添加不必要的日志、注释、测试、待办事项或错误处理
+- 不要进行"顺手"的额外修改，确保新代码不干扰现有功能
+- 特别注意不要破坏 OpenTelemetry 的 span 生命周期管理
+
+### 4. 严格检查代码
+- 检查代码的正确性、是否符合任务范围，以及是否会引发副作用
+- 确保代码与现有代码风格一致，防止破坏已有功能
+- 评估改动是否会影响下游系统
+- 特别关注内存泄漏和性能影响
+
+### 5. 清晰交付成果
+- 总结改动的具体内容和原因
+- 列出所有修改的文件及其具体变更
+- 说明任何假设或潜在风险，供他人审查
+- 特别说明对 OpenTelemetry 追踪和 FrankenPHP Worker 模式的影响
+
+## 核心原则
+
+- **不即兴发挥**：严格按照任务要求执行，不随意创新
+- **不过度设计**：避免复杂化，只做必要的工作
+- **不偏离规则**：始终遵循这套流程，确保代码安全、可靠
+
+## 项目特定编码规范
+
+### PHP 代码规范
+- 必须使用 `<?php` 标签开头
+- 必须在每个文件开头添加 `declare(strict_types=1);`
+- 使用 PSR-4 自动加载标准
+- 遵循 Laravel Pint 代码风格规范
+
+### 命名约定
+- 类名使用 PascalCase：`FrankenPhpWorkerWatcher`
+- 方法名使用 camelCase：`onRequestStart()`
+- 常量使用 SCREAMING_SNAKE_CASE：`OTEL_RESPONSE_TRACE_HEADER_NAME`
+- 配置键使用 snake_case：`response_trace_header_name`
+
+### OpenTelemetry 特定规范
+- Span 名称使用 dot.notation：`frankenphp.worker.request_start`
+- 属性名使用标准前缀：`frankenphp.worker.`, `http.`, `db.`
+- 敏感信息必须过滤：使用 `***` 替代敏感值
+- 始终正确管理 span 生命周期：确保 `startSpan()` 后有对应的 `end()`
+
+### FrankenPHP Worker 模式规范
+- Worker 模式检测：使用标准的 `isFrankenPhpWorkerMode()` 方法
+- 内存管理：关注内存增长，超过阈值时记录警告
+- 状态清理：在请求间正确清理 OpenTelemetry 上下文
+- 错误处理：使用 `error_log()` 记录清理错误，避免影响正常请求
+
+### 配置管理
+- 环境变量使用 `OTEL_` 前缀
+- 配置文件使用 `config/otel.php`
+- 支持通过环境变量覆盖默认配置
+- 提供合理的默认值
+
+### 错误处理
+- 使用 try-catch 包装可能失败的 OpenTelemetry 操作
+- 静默处理追踪相关错误，不影响业务逻辑
+- 使用 `error_log()` 记录重要错误信息
+- 避免在追踪代码中抛出异常
+
+### 性能考虑
+- 最小化追踪代码的性能开销
+- 使用条件检查避免不必要的操作
+- 在 worker 模式下特别注意内存使用
+- 合理使用垃圾回收机制
+
+### 测试要求
+- 为新功能编写单元测试
+- 使用 Orchestra Testbench 进行 Laravel 集成测试
+- 测试文件放在对应的 `tests/` 目录结构中
+- 确保测试覆盖错误处理路径
+
+## 代码注释规范
+
+- **代码注释必须使用英文**
+- 类和方法使用 PHPDoc 格式注释
+- 复杂逻辑添加行内注释说明
+- 公共 API 必须有完整的文档注释
+
+## 文件结构约定
+
+```
+src/
+├── Console/Commands/     # Artisan 命令
+├── Facades/             # Laravel Facades
+├── Hooks/               # OpenTelemetry Hooks (框架级拦截)
+├── Support/             # 支持类和工具
+├── Traits/              # 可复用的 Traits
+├── Watchers/            # 应用级监听器
+└── *.php               # 核心服务类
+```
+
+## 依赖管理
+- 核心依赖：OpenTelemetry PHP SDK
+- Laravel 框架：支持 10.0+, 11.0+, 12.0+
+- PHP 版本：最低 8.4
+- 必须扩展：ext-opentelemetry
+
+## 安全考虑
+- 过滤敏感信息：Cookie, Authorization, API Key
+- 使用白名单机制控制记录的 HTTP 头
+- 避免在追踪数据中暴露用户隐私信息
+- 正确处理跨请求的状态清理
+
+## 向后兼容性
+- 保持配置文件结构的稳定性
+- 避免破坏现有的 Watcher 和 Hook 接口
+- 新功能使用 Feature Flag 控制
+- 遵循语义化版本管理
+
+记住：严格遵循这些规则，确保每次代码改动都是必要的、安全的和高效的。

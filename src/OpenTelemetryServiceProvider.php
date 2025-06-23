@@ -46,6 +46,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand::class,
+                \Overtrue\LaravelOpenTelemetry\Console\Commands\FrankenPhpWorkerStatusCommand::class,
             ]);
         }
     }
