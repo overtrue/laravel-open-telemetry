@@ -9,9 +9,11 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
+use OpenTelemetry\SemConv\TraceAttributes;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
+use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
 
 /**
  * Queue Watcher
@@ -20,10 +22,6 @@ use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
  */
 class QueueWatcher extends Watcher
 {
-    public function __construct(
-        private readonly CachedInstrumentation $instrumentation,
-    ) {}
-
     public function register(Application $app): void
     {
         $app['events']->listen(JobQueued::class, [$this, 'recordJobQueued']);
@@ -34,22 +32,22 @@ class QueueWatcher extends Watcher
 
     public function recordJobQueued(JobQueued $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('queue.queued')
+        $jobClass = is_object($event->job) ? get_class($event->job) : $event->job;
+
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::queue('publish', $jobClass))
             ->setSpanKind(SpanKind::KIND_PRODUCER)
             ->startSpan();
 
         $attributes = [
-            'queue.connection' => $event->connectionName,
-            'queue.name' => $event->queue,
-            'queue.job.class' => $event->job::class,
-            'queue.job.id' => $event->id,
+            TraceAttributes::MESSAGING_SYSTEM => $event->connectionName,
+            TraceAttributes::MESSAGING_DESTINATION_NAME => $event->queue,
+            TraceAttributes::MESSAGING_MESSAGE_ID => $event->id,
+            'messaging.job.class' => $jobClass,
         ];
 
-        // Record delay time
-        if (method_exists($event->job, 'delay') && $event->job->delay) {
-            $attributes['queue.job.delay'] = $event->job->delay;
+        if (is_object($event->job) && method_exists($event->job, 'delay') && $event->job->delay) {
+            $attributes['messaging.job.delay_seconds'] = $event->job->delay;
         }
 
         $span->setAttributes($attributes);
@@ -58,79 +56,50 @@ class QueueWatcher extends Watcher
 
     public function recordJobProcessing(JobProcessing $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('queue.processing')
+        $payload = $event->job->payload();
+        $jobClass = $payload['displayName'] ?? 'unknown';
+
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::queue('process', $jobClass))
             ->setSpanKind(SpanKind::KIND_CONSUMER)
             ->startSpan();
 
-        $payload = $event->job->payload();
-
         $attributes = [
-            'queue.connection' => $event->connectionName,
-            'queue.name' => $event->job->getQueue(),
-            'queue.job.class' => $payload['displayName'] ?? 'unknown',
-            'queue.job.id' => $event->job->getJobId(),
-            'queue.job.attempts' => $event->job->attempts(),
-            'queue.job.max_tries' => $payload['maxTries'] ?? null,
-            'queue.job.timeout' => $payload['timeout'] ?? null,
+            TraceAttributes::MESSAGING_SYSTEM => $event->connectionName,
+            TraceAttributes::MESSAGING_DESTINATION_NAME => $event->job->getQueue(),
+            TraceAttributes::MESSAGING_MESSAGE_ID => $event->job->getJobId(),
+            'messaging.job.class' => $jobClass,
+            'messaging.job.attempts' => $event->job->attempts(),
+            'messaging.job.max_tries' => $payload['maxTries'] ?? null,
+            'messaging.job.timeout' => $payload['timeout'] ?? null,
         ];
 
-        // Record job data size
         if (isset($payload['data'])) {
-            $attributes['queue.job.data_size'] = strlen(serialize($payload['data']));
+            $attributes['messaging.job.data_size'] = strlen(serialize($payload['data']));
         }
 
-        $span->setAttributes($attributes);
-        $span->end();
+        $span->setAttributes($attributes)->end();
     }
 
     public function recordJobProcessed(JobProcessed $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('queue.processed')
-            ->setSpanKind(SpanKind::KIND_CONSUMER)
-            ->startSpan();
+        $jobClass = $event->job->payload()['displayName'] ?? 'unknown';
 
-        $payload = $event->job->payload();
-
-        $attributes = [
-            'queue.connection' => $event->connectionName,
-            'queue.name' => $event->job->getQueue(),
-            'queue.job.class' => $payload['displayName'] ?? 'unknown',
-            'queue.job.id' => $event->job->getJobId(),
-            'queue.job.attempts' => $event->job->attempts(),
-            'queue.job.status' => 'completed',
-        ];
-
-        $span->setAttributes($attributes);
-        $span->end();
+        Measure::addEvent('queue.job.processed', [
+            'messaging.job.id' => $event->job->getJobId(),
+            'messaging.job.class' => $jobClass,
+            'messaging.job.status' => 'completed',
+        ]);
     }
 
     public function recordJobFailed(JobFailed $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('queue.failed')
-            ->setSpanKind(SpanKind::KIND_CONSUMER)
-            ->startSpan();
+        $jobClass = $event->job->payload()['displayName'] ?? 'unknown';
 
-        $payload = $event->job->payload();
-
-        $attributes = [
-            'queue.connection' => $event->connectionName,
-            'queue.name' => $event->job->getQueue(),
-            'queue.job.class' => $payload['displayName'] ?? 'unknown',
-            'queue.job.id' => $event->job->getJobId(),
-            'queue.job.attempts' => $event->job->attempts(),
-            'queue.job.status' => 'failed',
-            'queue.job.error' => $event->exception->getMessage(),
-            'queue.job.error_type' => get_class($event->exception),
-        ];
-
-        $span->recordException($event->exception);
-        $span->setAttributes($attributes);
-        $span->end();
+        Measure::recordException($event->exception, [
+            'messaging.job.id' => $event->job->getJobId(),
+            'messaging.job.class' => $jobClass,
+            'messaging.job.status' => 'failed',
+        ]);
     }
 }

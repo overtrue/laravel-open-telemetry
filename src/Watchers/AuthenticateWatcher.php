@@ -10,9 +10,11 @@ use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
+use OpenTelemetry\SemConv\TraceAttributes;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
+use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
 
 /**
  * Authenticate Watcher
@@ -21,10 +23,6 @@ use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
  */
 class AuthenticateWatcher extends Watcher
 {
-    public function __construct(
-        private readonly CachedInstrumentation $instrumentation,
-    ) {}
-
     public function register(Application $app): void
     {
         $app['events']->listen(Attempting::class, [$this, 'recordAttempting']);
@@ -36,9 +34,8 @@ class AuthenticateWatcher extends Watcher
 
     public function recordAttempting(Attempting $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('auth.attempting')
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::auth('attempting'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
@@ -53,15 +50,14 @@ class AuthenticateWatcher extends Watcher
 
     public function recordAuthenticated(Authenticated $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('auth.authenticated')
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::auth('authenticated'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
         $span->setAttributes([
             'auth.guard' => $event->guard,
-            'auth.user.id' => $event->user->getAuthIdentifier(),
+            TraceAttributes::ENDUSER_ID => $event->user->getAuthIdentifier(),
             'auth.user.type' => get_class($event->user),
         ]);
 
@@ -70,15 +66,14 @@ class AuthenticateWatcher extends Watcher
 
     public function recordLogin(Login $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('auth.login')
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::auth('login'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
         $span->setAttributes([
             'auth.guard' => $event->guard,
-            'auth.user.id' => $event->user->getAuthIdentifier(),
+            TraceAttributes::ENDUSER_ID => $event->user->getAuthIdentifier(),
             'auth.user.type' => get_class($event->user),
             'auth.remember' => $event->remember,
         ]);
@@ -88,16 +83,15 @@ class AuthenticateWatcher extends Watcher
 
     public function recordFailed(Failed $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('auth.failed')
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::auth('failed'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
         $span->setAttributes([
             'auth.guard' => $event->guard,
             'auth.credentials.count' => count($event->credentials),
-            'auth.user.id' => $event->user ? $event->user->getAuthIdentifier() : null,
+            TraceAttributes::ENDUSER_ID => $event->user ? $event->user->getAuthIdentifier() : null,
         ]);
 
         $span->end();
@@ -105,16 +99,15 @@ class AuthenticateWatcher extends Watcher
 
     public function recordLogout(Logout $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('auth.logout')
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::auth('logout'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
         $span->setAttributes([
             'auth.guard' => $event->guard,
-            'auth.user.id' => $event->user->getAuthIdentifier(),
-            'auth.user.type' => get_class($event->user),
+            TraceAttributes::ENDUSER_ID => $event->user ? $event->user->getAuthIdentifier() : null,
+            'auth.user.type' => $event->user ? get_class($event->user) : null,
         ]);
 
         $span->end();

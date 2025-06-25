@@ -65,7 +65,10 @@ class SpanBuilder
     public function start(): StartedSpan
     {
         $span = $this->builder->startSpan();
-        $scope = $span->activate();
+
+        // Store span in context and activate
+        $spanContext = $span->storeInContext(Context::getCurrent());
+        $scope = $spanContext->activate();
 
         return new StartedSpan($span, $scope);
     }
@@ -75,16 +78,14 @@ class SpanBuilder
      */
     public function measure(\Closure $callback): mixed
     {
-        $span = $this->builder->startSpan();
-        $scope = $span->activate();
+        $span = $this->start();
 
         try {
-            return $callback($span);
+            return $callback($span->getSpan());
         } catch (\Throwable $exception) {
             $span->recordException($exception);
             throw $exception;
         } finally {
-            $scope->detach();
             $span->end();
         }
     }

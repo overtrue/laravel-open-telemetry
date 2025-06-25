@@ -10,6 +10,23 @@ abstract class TestCase extends OrchestraTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // 初始化 OpenTelemetry TracerProvider 用于测试
+        $this->initializeOpenTelemetry();
+    }
+
+    /**
+     * 初始化 OpenTelemetry 用于测试
+     */
+    protected function initializeOpenTelemetry(): void
+    {
+        // 创建一个简单的 TracerProvider 用于测试
+        $tracerProvider = \OpenTelemetry\SDK\Trace\TracerProvider::builder()->build();
+
+        // 使用 Sdk::builder 来正确设置全局提供者
+        \OpenTelemetry\SDK\Sdk::builder()
+            ->setTracerProvider($tracerProvider)
+            ->buildAndRegisterGlobal();
     }
 
     protected function getPackageProviders($app): array

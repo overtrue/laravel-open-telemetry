@@ -1,0 +1,37 @@
+# Cursor Rules for Laravel OpenTelemetry Package
+
+## Code Style and Comments
+- Use English comments only - no Chinese or other languages
+- Follow PSR-12 coding standards
+- Use meaningful variable and method names
+- Add proper docblocks for all public methods and classes
+
+## OpenTelemetry Specific Rules
+- Always use OpenTelemetry semantic conventions (TraceAttributes) when available
+- Prefer standard semantic conventions over custom attribute names
+- Use proper span kinds (SERVER, CLIENT, INTERNAL, PRODUCER, CONSUMER)
+- Always handle exceptions in spans with proper error recording
+
+## Laravel Integration
+- Follow Laravel conventions for service providers, facades, and middleware
+- Use Laravel's container for dependency injection
+- Respect Laravel's configuration patterns
+- Check the `otel.enabled` config before registering any OpenTelemetry components
+
+## Documentation
+- Use English for all documentation and comments
+- Include usage examples in docblocks where appropriate
+- Document any custom attributes that don't have standard semantic conventions
+- Keep README and examples up to date with API changes
+
+## Error Handling
+- Always wrap span operations in try-catch blocks
+- Use proper OpenTelemetry status codes
+- Record exceptions with context information
+- Gracefully handle disabled OpenTelemetry scenarios
+
+## Performance
+- Avoid creating spans when OpenTelemetry is disabled
+- Use lazy loading for expensive operations
+- Consider the performance impact of attribute collection
+- Implement proper span lifecycle management

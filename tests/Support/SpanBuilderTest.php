@@ -139,8 +139,15 @@ class SpanBuilderTest extends TestCase
     {
         $mockSpan = Mockery::mock(SpanInterface::class);
         $mockScope = Mockery::mock(ScopeInterface::class);
+        $mockContext = Mockery::mock('OpenTelemetry\Context\ContextInterface');
 
-        $mockSpan->shouldReceive('activate')
+        // Mock storeInContext method
+        $mockSpan->shouldReceive('storeInContext')
+            ->once()
+            ->andReturn($mockContext);
+
+        // Mock activate method on context
+        $mockContext->shouldReceive('activate')
             ->once()
             ->andReturn($mockScope);
 

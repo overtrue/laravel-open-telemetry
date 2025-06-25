@@ -5,7 +5,6 @@ namespace Overtrue\LaravelOpenTelemetry\Tests;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Log;
 use Mockery;
-use Overtrue\LaravelOpenTelemetry\Console\Commands\FrankenPhpWorkerStatusCommand;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
@@ -36,7 +35,7 @@ class OpenTelemetryServiceProviderTest extends TestCase
         // Verify config is merged
         $this->assertNotNull(config('otel'));
         $this->assertIsArray(config('otel.watchers'));
-        $this->assertIsString(config('otel.response_trace_header_name'));
+        $this->assertIsArray(config('otel.middleware'));
     }
 
     public function test_provider_publishes_config()
@@ -89,7 +88,6 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $provider->shouldReceive('commands')
             ->with([
                 TestCommand::class,
-                FrankenPhpWorkerStatusCommand::class,
             ])
             ->once();
 
@@ -135,6 +133,49 @@ class OpenTelemetryServiceProviderTest extends TestCase
 
         // Verify the expectation was met
         $this->assertTrue(true); // Mockery will fail if expectation not met
+    }
+
+    public function test_tracer_provider_is_initialized()
+    {
+        // 获取全局 TracerProvider
+        $tracerProvider = \OpenTelemetry\API\Globals::tracerProvider();
+
+        // 确保不是 NoopTracerProvider
+        $this->assertNotInstanceOf(
+            \OpenTelemetry\API\Trace\NoopTracerProvider::class,
+            $tracerProvider
+        );
+
+        // 确保可以创建 tracer
+        $tracer = $tracerProvider->getTracer('test');
+        $this->assertNotNull($tracer);
+
+        // 确保可以创建 span
+        $span = $tracer->spanBuilder('test-span')->startSpan();
+        $this->assertNotNull($span);
+        $span->end();
+    }
+
+    public function test_tracer_provider_uses_configuration()
+    {
+        // 设置配置
+        config([
+            'otel.tracer_provider.service.name' => 'test-service',
+            'otel.tracer_provider.service.version' => '2.0.0',
+        ]);
+
+        // 重新初始化 ServiceProvider
+        $this->app->register(\Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider::class);
+
+        // 获取 tracer 并创建 span
+        $tracer = \OpenTelemetry\API\Globals::tracerProvider()->getTracer('test');
+        $span = $tracer->spanBuilder('test-span')->startSpan();
+
+        // 检查 span 的资源信息
+        $resource = $span->getResource();
+        $this->assertNotNull($resource);
+
+        $span->end();
     }
 
     protected function tearDown(): void

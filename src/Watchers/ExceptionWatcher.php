@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
+use Illuminate\Log\Events\MessageLogged;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 use Throwable;
 
 /**
@@ -17,45 +18,26 @@ use Throwable;
  */
 class ExceptionWatcher extends Watcher
 {
-    public function __construct(
-        private readonly CachedInstrumentation $instrumentation,
-    ) {}
-
     public function register(Application $app): void
     {
-        $app['events']->listen('Illuminate\Log\Events\MessageLogged', [$this, 'recordException']);
+        $app['events']->listen(\Illuminate\Log\Events\MessageLogged::class, [$this, 'recordException']);
     }
 
-    public function recordException($event): void
+    public function recordException(MessageLogged $event): void
     {
-        // Only handle error and critical level logs
-        if (! in_array($event->level, ['error', 'critical', 'emergency'])) {
+        if (! isset($event->context['exception']) || ! ($event->context['exception'] instanceof Throwable)) {
             return;
         }
 
-        // Check if exception information is included
-        $exception = $event->context['exception'] ?? null;
-        if (! $exception instanceof Throwable) {
-            return;
-        }
-
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder('exception')
+        $exception = $event->context['exception'];
+        $tracer = Measure::tracer();
+        $span = $tracer->spanBuilder(SpanNameHelper::exception(get_class($exception)))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->startSpan();
 
         $span->recordException($exception, [
-            'exception.escaped' => true,
-        ]);
-
-        $span->setAttributes([
-            'exception.type' => get_class($exception),
             'exception.message' => $exception->getMessage(),
-            'exception.file' => $exception->getFile(),
-            'exception.line' => $exception->getLine(),
-            'log.level' => $event->level,
-            'log.channel' => $event->context['log_channel'] ?? 'unknown',
+            'exception.code' => $exception->getCode(),
         ]);
 
         $span->end();
