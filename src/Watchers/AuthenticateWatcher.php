@@ -11,10 +11,10 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Foundation\Application;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
-use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
 
 /**
  * Authenticate Watcher
@@ -37,6 +37,7 @@ class AuthenticateWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::auth('attempting'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([
@@ -53,6 +54,7 @@ class AuthenticateWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::auth('authenticated'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([
@@ -69,6 +71,7 @@ class AuthenticateWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::auth('login'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([
@@ -86,6 +89,7 @@ class AuthenticateWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::auth('failed'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([
@@ -102,6 +106,7 @@ class AuthenticateWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::auth('logout'))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([

@@ -69,6 +69,9 @@ class TestCommandTest extends TestCase
             'current_trace_id' => 'test-trace-id',
         ]);
         Measure::shouldReceive('isRecording')->andReturn(true);
+
+        // Allow addEvent to be called since EventWatcher is active
+        Measure::shouldReceive('addEvent')->byDefault();
     }
 
     public function test_command_creates_test_span()
@@ -162,6 +165,9 @@ class TestCommandTest extends TestCase
             'current_trace_id' => null,
         ]);
         Measure::shouldReceive('isRecording')->andReturn(false);
+
+        // Allow addEvent to be called even when disabled
+        Measure::shouldReceive('addEvent')->byDefault();
 
         // Execute command
         $result = Artisan::call('otel:test');

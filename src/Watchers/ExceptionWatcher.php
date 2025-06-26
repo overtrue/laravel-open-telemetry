@@ -7,6 +7,7 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Log\Events\MessageLogged;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 use Throwable;
@@ -31,8 +32,10 @@ class ExceptionWatcher extends Watcher
 
         $exception = $event->context['exception'];
         $tracer = Measure::tracer();
+
         $span = $tracer->spanBuilder(SpanNameHelper::exception(get_class($exception)))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->recordException($exception, [

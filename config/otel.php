@@ -30,6 +30,19 @@ return [
     ],
 
     /**
+     * HTTP Client Configuration
+     */
+    'http_client' => [
+        /**
+         * Global Request Middleware Configuration
+         * Automatically adds OpenTelemetry propagation headers to all HTTP requests
+         */
+        'propagation_middleware' => [
+            'enabled' => env('OTEL_HTTP_CLIENT_PROPAGATION_ENABLED', true),
+        ],
+    ],
+
+    /**
      * Watchers Configuration
      *
      * Available Watcher classes:
@@ -45,7 +58,7 @@ return [
     'watchers' => [
         \Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class,
-        \Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, // 已添加智能重复检测，可以同时使用
         \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,

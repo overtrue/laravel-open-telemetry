@@ -55,7 +55,7 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $this->assertContains($expectedConfigPath, array_values($publishes));
     }
 
-    public function test_provider_registers_guzzle_macro()
+    public function test_provider_registers_http_client_watchers()
     {
         // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
@@ -63,8 +63,9 @@ class OpenTelemetryServiceProviderTest extends TestCase
         // Boot services
         $provider->boot();
 
-        // Verify Guzzle macro is registered
-        $this->assertTrue(PendingRequest::hasMacro('withTrace'));
+        // Verify HTTP client watchers are registered by checking config
+        $watchers = config('otel.watchers', []);
+        $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, $watchers);
     }
 
     public function test_provider_registers_console_commands()
@@ -97,31 +98,33 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $this->assertTrue(true); // Mockery will fail if expectation not met
     }
 
-    public function test_guzzle_macro_returns_request_with_middleware()
+    public function test_http_client_propagation_middleware_configuration()
     {
         // Create service provider and boot it
         $provider = new OpenTelemetryServiceProvider($this->app);
         $provider->boot();
 
-        // Create a PendingRequest instance
-        $request = new PendingRequest;
+        // Verify HTTP client propagation middleware config exists and is enabled by default
+        $this->assertTrue(config('otel.http_client.propagation_middleware.enabled', true));
 
-        // Use the withTrace macro
-        $requestWithTrace = $request->withTrace();
-
-        // Verify it returns a PendingRequest instance
-        $this->assertInstanceOf(PendingRequest::class, $requestWithTrace);
+        // Test that we can disable it via config
+        config(['otel.http_client.propagation_middleware.enabled' => false]);
+        $this->assertFalse(config('otel.http_client.propagation_middleware.enabled'));
     }
 
     public function test_provider_logs_startup_and_registration()
     {
         // Mock Log facade
         Log::shouldReceive('debug')
-            ->with('[laravel-open-telemetry] started', Mockery::type('array'))
+            ->with('OpenTelemetry: Service provider initialization started', Mockery::type('array'))
             ->once();
 
         Log::shouldReceive('debug')
-            ->with('[laravel-open-telemetry] registered.')
+            ->with('OpenTelemetry: Service provider registered successfully')
+            ->once();
+
+        Log::shouldReceive('debug')
+            ->with('OpenTelemetry: Middleware registered globally for automatic tracing')
             ->once();
 
         // Create service provider

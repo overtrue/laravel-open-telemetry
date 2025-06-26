@@ -3,7 +3,6 @@
 namespace Tests\Support;
 
 use Illuminate\Http\Request;
-use Illuminate\Routing\Route;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\SemConv\TraceAttributes;
@@ -14,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 class HttpAttributesHelperTest extends TestCase
 {
     private $mockSpan;
+
     private $mockResponse;
 
     protected function setUp(): void
@@ -24,7 +24,7 @@ class HttpAttributesHelperTest extends TestCase
         $this->mockResponse = $this->createMock(Response::class);
     }
 
-    public function testSetRequestAttributes()
+    public function test_set_request_attributes()
     {
         $request = Request::create('https://example.com/test?foo=bar', 'GET', [], [], [], [
             'HTTP_USER_AGENT' => 'TestAgent',
@@ -33,7 +33,7 @@ class HttpAttributesHelperTest extends TestCase
             'REMOTE_PORT' => '12345',
         ]);
 
-                // 我们不能精确预测所有属性，因为有些是条件性的
+        // 我们不能精确预测所有属性，因为有些是条件性的
         // 所以我们使用 with() 回调来验证关键属性
         $this->mockSpan->expects($this->once())
             ->method('setAttributes')
@@ -56,7 +56,7 @@ class HttpAttributesHelperTest extends TestCase
         HttpAttributesHelper::setRequestAttributes($this->mockSpan, $request);
     }
 
-    public function testSetResponseAttributes()
+    public function test_set_response_attributes()
     {
         $this->mockResponse->method('getStatusCode')->willReturn(200);
         $this->mockResponse->method('getContent')->willReturn('test content');
@@ -78,7 +78,7 @@ class HttpAttributesHelperTest extends TestCase
         HttpAttributesHelper::setResponseAttributes($this->mockSpan, $this->mockResponse);
     }
 
-    public function testSetSpanStatusFromResponseSuccess()
+    public function test_set_span_status_from_response_success()
     {
         $this->mockResponse->method('getStatusCode')->willReturn(200);
 
@@ -89,7 +89,7 @@ class HttpAttributesHelperTest extends TestCase
         HttpAttributesHelper::setSpanStatusFromResponse($this->mockSpan, $this->mockResponse);
     }
 
-    public function testSetSpanStatusFromResponseError()
+    public function test_set_span_status_from_response_error()
     {
         $this->mockResponse->method('getStatusCode')->willReturn(500);
 
@@ -100,18 +100,17 @@ class HttpAttributesHelperTest extends TestCase
         HttpAttributesHelper::setSpanStatusFromResponse($this->mockSpan, $this->mockResponse);
     }
 
-    public function testGenerateSpanName()
+    public function test_generate_span_name()
     {
         $request = Request::create('/users', 'POST');
         $this->assertEquals('HTTP POST /users', HttpAttributesHelper::generateSpanName($request));
     }
 
-    public function testGenerateSpanNameWithRoute()
+    public function test_generate_span_name_with_route()
     {
         $request = Request::create('/users/123', 'GET');
         $request->setRouteResolver(function () {
-            $route = new \Illuminate\Routing\Route('GET', 'users/{id}', function () {
-            });
+            $route = new \Illuminate\Routing\Route('GET', 'users/{id}', function () {});
             $route->bind(Request::create('/users/123', 'GET'));
 
             return $route;
@@ -119,7 +118,7 @@ class HttpAttributesHelperTest extends TestCase
         $this->assertEquals('HTTP GET users/{id}', HttpAttributesHelper::generateSpanName($request));
     }
 
-    public function testExtractCarrierFromHeaders()
+    public function test_extract_carrier_from_headers()
     {
         $request = Request::create('/test', 'GET', [], [], [], [
             'HTTP_CONTENT_TYPE' => 'application/json',

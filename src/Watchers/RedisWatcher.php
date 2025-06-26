@@ -7,10 +7,10 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Redis\Events\CommandExecuted;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
-use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
 
 /**
  * Redis Watcher
@@ -33,6 +33,7 @@ class RedisWatcher extends Watcher
             ->spanBuilder(SpanNameHelper::redis($event->command))
             ->setSpanKind(SpanKind::KIND_CLIENT)
             ->setStartTimestamp($startTime)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $attributes = [
@@ -47,7 +48,7 @@ class RedisWatcher extends Watcher
 
     protected function formatCommand(string $command, array $parameters): string
     {
-        $parameters = implode(' ', array_map(fn ($param) => is_string($param) ? (strlen($param) > 100 ? substr($param, 0, 100) . '...' : $param) : (is_scalar($param) ? strval($param) : gettype($param)), $parameters));
+        $parameters = implode(' ', array_map(fn ($param) => is_string($param) ? (strlen($param) > 100 ? substr($param, 0, 100).'...' : $param) : (is_scalar($param) ? strval($param) : gettype($param)), $parameters));
 
         return "{$command} {$parameters}";
     }

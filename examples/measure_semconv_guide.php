@@ -1,40 +1,41 @@
 <?php
 
 /**
- * OpenTelemetry 语义约定使用指南
+ * OpenTelemetry Semantic Conventions Usage Guide
  *
- * 本文件演示了如何在 Laravel OpenTelemetry 包中正确使用标准语义约定
- * 确保与其他 OpenTelemetry 实现的兼容性和一致性
+ * This file demonstrates how to properly use standard semantic conventions
+ * in the Laravel OpenTelemetry package to ensure compatibility and consistency
+ * with other OpenTelemetry implementations
  */
 
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
-// ======================= 数据库操作语义约定 =======================
+// ======================= Database Operation Semantic Conventions =======================
 
-// ✅ 正确：使用标准的数据库语义约定
+// ✅ Correct: Using standard database semantic conventions
 Measure::database('SELECT', 'users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
-        TraceAttributes::DB_SYSTEM => 'mysql',                    // 数据库系统
-        TraceAttributes::DB_NAMESPACE => 'myapp_production',      // 数据库名称
-        TraceAttributes::DB_COLLECTION_NAME => 'users',          // 表名
-        TraceAttributes::DB_OPERATION_NAME => 'SELECT',          // 操作名称
-        TraceAttributes::DB_QUERY_TEXT => 'SELECT * FROM users WHERE active = ?', // 查询文本
+        TraceAttributes::DB_SYSTEM => 'mysql',                    // Database system
+        TraceAttributes::DB_NAMESPACE => 'myapp_production',      // Database name
+        TraceAttributes::DB_COLLECTION_NAME => 'users',          // Table name
+        TraceAttributes::DB_OPERATION_NAME => 'SELECT',          // Operation name
+        TraceAttributes::DB_QUERY_TEXT => 'SELECT * FROM users WHERE active = ?', // Query text
     ]);
 });
 
-// ❌ 错误：使用自定义属性名
+// ❌ Incorrect: Using custom attribute names
 Measure::database('SELECT', 'users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
-        'database.type' => 'mysql',         // 应该用 TraceAttributes::DB_SYSTEM
-        'db.name' => 'myapp_production',    // 应该用 TraceAttributes::DB_NAMESPACE
-        'table.name' => 'users',            // 应该用 TraceAttributes::DB_COLLECTION_NAME
+        'database.type' => 'mysql',         // Should use TraceAttributes::DB_SYSTEM
+        'db.name' => 'myapp_production',    // Should use TraceAttributes::DB_NAMESPACE
+        'table.name' => 'users',            // Should use TraceAttributes::DB_COLLECTION_NAME
     ]);
 });
 
-// ======================= HTTP 客户端语义约定 =======================
+// ======================= HTTP Client Semantic Conventions =======================
 
-// ✅ 正确：使用标准的 HTTP 语义约定
+// ✅ Correct: Using standard HTTP semantic conventions
 Measure::httpClient('GET', 'https://api.example.com/users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::HTTP_REQUEST_METHOD => 'GET',
@@ -46,18 +47,18 @@ Measure::httpClient('GET', 'https://api.example.com/users', function ($spanBuild
     ]);
 });
 
-// ❌ 错误：使用自定义属性名
+// ❌ Incorrect: Using custom attribute names
 Measure::httpClient('GET', 'https://api.example.com/users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
-        'http.method' => 'GET',             // 应该用 TraceAttributes::HTTP_REQUEST_METHOD
-        'request.url' => 'https://api.example.com/users', // 应该用 TraceAttributes::URL_FULL
-        'host.name' => 'api.example.com',  // 应该用 TraceAttributes::SERVER_ADDRESS
+        'http.method' => 'GET',             // Should use TraceAttributes::HTTP_REQUEST_METHOD
+        'request.url' => 'https://api.example.com/users', // Should use TraceAttributes::URL_FULL
+        'host.name' => 'api.example.com',  // Should use TraceAttributes::SERVER_ADDRESS
     ]);
 });
 
-// ======================= 消息传递语义约定 =======================
+// ======================= Messaging Semantic Conventions =======================
 
-// ✅ 正确：使用标准的消息传递语义约定
+// ✅ Correct: Using standard messaging semantic conventions
 Measure::queue('process', 'SendEmailJob', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::MESSAGING_SYSTEM => 'laravel-queue',
@@ -67,36 +68,36 @@ Measure::queue('process', 'SendEmailJob', function ($spanBuilder) {
     ]);
 });
 
-// ❌ 错误：使用自定义属性名
+// ❌ Incorrect: Using custom attribute names
 Measure::queue('process', 'SendEmailJob', function ($spanBuilder) {
     $spanBuilder->setAttributes([
-        'queue.system' => 'laravel-queue',  // 应该用 TraceAttributes::MESSAGING_SYSTEM
-        'queue.name' => 'emails',           // 应该用 TraceAttributes::MESSAGING_DESTINATION_NAME
-        'job.operation' => 'PROCESS',       // 应该用 TraceAttributes::MESSAGING_OPERATION_TYPE
+        'queue.system' => 'laravel-queue',  // Should use TraceAttributes::MESSAGING_SYSTEM
+        'queue.name' => 'emails',           // Should use TraceAttributes::MESSAGING_DESTINATION_NAME
+        'job.operation' => 'PROCESS',       // Should use TraceAttributes::MESSAGING_OPERATION_TYPE
     ]);
 });
 
-// ======================= 事件语义约定 =======================
+// ======================= Event Semantic Conventions =======================
 
-// ✅ 正确：使用标准的事件语义约定
+// ✅ Correct: Using standard event semantic conventions
 Measure::event('user.registered', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::EVENT_NAME => 'user.registered',
         TraceAttributes::ENDUSER_ID => '123',
-        'event.domain' => 'laravel',  // 自定义属性，因为没有标准定义
+        'event.domain' => 'laravel',  // Custom attribute, as no standard is defined
     ]);
 });
 
-// ======================= 异常语义约定 =======================
+// ======================= Exception Semantic Conventions =======================
 
 try {
-    // 一些可能失败的操作
+    // Some operation that might fail
     throw new \Exception('Something went wrong');
 } catch (\Exception $e) {
-    // ✅ 正确：异常会自动使用标准语义约定
+    // ✅ Correct: Exceptions automatically use standard semantic conventions
     Measure::recordException($e);
 
-    // 手动记录时也使用标准属性
+    // When recording manually, also use standard attributes
     Measure::addEvent('exception.occurred', [
         TraceAttributes::EXCEPTION_TYPE => get_class($e),
         TraceAttributes::EXCEPTION_MESSAGE => $e->getMessage(),
@@ -105,20 +106,20 @@ try {
     ]);
 }
 
-// ======================= 用户认证语义约定 =======================
+// ======================= User Authentication Semantic Conventions =======================
 
-// ✅ 正确：使用标准的用户语义约定
+// ✅ Correct: Using standard user semantic conventions
 Measure::auth('login', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::ENDUSER_ID => auth()->id(),
         TraceAttributes::ENDUSER_ROLE => auth()->user()->role ?? 'user',
-        // 'auth.method' => 'password',  // 自定义属性，因为没有标准定义
+        // 'auth.method' => 'password',  // Custom attribute, as no standard is defined
     ]);
 });
 
-// ======================= 网络语义约定 =======================
+// ======================= Network Semantic Conventions =======================
 
-// ✅ 正确：使用标准的网络语义约定
+// ✅ Correct: Using standard network semantic conventions
 $spanBuilder->setAttributes([
     TraceAttributes::NETWORK_PROTOCOL_NAME => 'http',
     TraceAttributes::NETWORK_PROTOCOL_VERSION => '1.1',
@@ -126,14 +127,14 @@ $spanBuilder->setAttributes([
     TraceAttributes::NETWORK_PEER_PORT => 8080,
 ]);
 
-// ======================= 性能监控语义约定 =======================
+// ======================= Performance Monitoring Semantic Conventions =======================
 
-// ✅ 正确：监控性能时的属性设置
+// ✅ Correct: Setting attributes for performance monitoring
 Measure::trace('data.processing', function ($span) {
     $startTime = microtime(true);
     $startMemory = memory_get_usage();
 
-    // 执行数据处理
+    // Execute data processing
     $result = processLargeDataset();
 
     $endTime = microtime(true);
@@ -150,10 +151,10 @@ Measure::trace('data.processing', function ($span) {
     return $result;
 });
 
-// ======================= 缓存操作（暂无标准语义约定）=======================
+// ======================= Cache Operations (No Standard Semantic Conventions Yet) =======================
 
-// 📝 注意：缓存操作目前没有标准的 OpenTelemetry 语义约定
-// 我们使用一致的自定义属性名，等待标准化
+// 📝 Note: Cache operations currently have no standard OpenTelemetry semantic conventions
+// We use consistent custom attribute names, awaiting standardization
 Measure::cache('get', 'user:123', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         'cache.operation' => 'GET',
@@ -164,58 +165,44 @@ Measure::cache('get', 'user:123', function ($spanBuilder) {
     ]);
 });
 
-// ======================= 最佳实践总结 =======================
+// ======================= Best Practices Summary =======================
 
 /**
- * 🎯 语义约定使用最佳实践：
+ * 🎯 Semantic Conventions Usage Best Practices:
  *
- * 1. 优先使用标准语义约定
- *    - 总是从 OpenTelemetry\SemConv\TraceAttributes 中使用预定义常量
- *    - 确保属性名和值符合 OpenTelemetry 规范
+ * 1. Prioritize Standard Semantic Conventions
+ *    - Always use predefined constants from OpenTelemetry\SemConv\TraceAttributes
+ *    - Ensure attribute names and values comply with OpenTelemetry specifications
  *
- * 2. 自定义属性命名规范
- *    - 当没有标准语义约定时，使用描述性的属性名
- *    - 遵循 "namespace.attribute" 的命名模式
- *    - 避免与现有标准属性冲突
+ * 2. Custom Attribute Naming Standards
+ *    - When no standard semantic conventions exist, use descriptive attribute names
+ *    - Follow the "namespace.attribute" naming pattern
+ *    - Avoid conflicts with existing standard attributes
  *
- * 3. 属性值标准化
- *    - 使用标准的枚举值（如 HTTP 方法名大写）
- *    - 保持属性值的一致性和可比较性
- *    - 避免包含敏感信息
+ * 3. Attribute Value Standardization
+ *    - Use standard enumerated values (e.g., HTTP method names in uppercase)
+ *    - Maintain consistency and comparability of attribute values
+ *    - Avoid including sensitive information
  *
- * 4. 向后兼容性
- *    - 当 OpenTelemetry 发布新的语义约定时，及时更新
- *    - 保持现有自定义属性的稳定性
+ * 4. Backward Compatibility
+ *    - Update promptly when OpenTelemetry releases new semantic conventions
+ *    - Maintain stability of existing custom attributes
  *
- * 5. 文档化自定义属性
- *    - 为项目特定的属性编写文档
- *    - 确保团队成员了解属性的含义和用途
+ * 5. Document Custom Attributes
+ *    - Write documentation for project-specific attributes
+ *    - Ensure team members understand attribute meanings and purposes
  */
 
-// ======================= 常见错误和修正 =======================
+// ======================= Common Errors and Corrections =======================
 
-// ❌ 错误：使用过时的属性名
+// ❌ Incorrect: Using deprecated attribute names
 $spanBuilder->setAttributes([
-    'http.method' => 'GET',                    // 已废弃
-    'http.url' => 'https://example.com',       // 已废弃
-    'http.status_code' => 200,                 // 已废弃
+    'http.method' => 'GET',                    // Deprecated
+    'http.url' => 'https://example.com',       // Deprecated
 ]);
 
-// ✅ 正确：使用最新的标准属性名
+// ✅ Correct: Using current standard attributes
 $spanBuilder->setAttributes([
-    TraceAttributes::HTTP_REQUEST_METHOD => 'GET',           // 新标准
-    TraceAttributes::URL_FULL => 'https://example.com',      // 新标准
-    TraceAttributes::HTTP_RESPONSE_STATUS_CODE => 200,       // 新标准
-]);
-
-// ❌ 错误：属性值不规范
-$spanBuilder->setAttributes([
-    TraceAttributes::DB_OPERATION_NAME => 'select',          // 应该大写
-    TraceAttributes::HTTP_REQUEST_METHOD => 'get',           // 应该大写
-]);
-
-// ✅ 正确：规范的属性值
-$spanBuilder->setAttributes([
-    TraceAttributes::DB_OPERATION_NAME => 'SELECT',          // 大写
-    TraceAttributes::HTTP_REQUEST_METHOD => 'GET',           // 大写
+    TraceAttributes::HTTP_REQUEST_METHOD => 'GET',      // Current standard
+    TraceAttributes::URL_FULL => 'https://example.com', // Current standard
 ]);

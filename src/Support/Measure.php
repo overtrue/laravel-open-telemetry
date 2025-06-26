@@ -4,30 +4,30 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context as LaravelContext;
+use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Globals;
+use OpenTelemetry\API\Trace\NoopTracer;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
-use OpenTelemetry\SemConv\TraceAttributes;
-use OpenTelemetry\API\Trace\StatusCode;
-use OpenTelemetry\API\Trace\NoopTracer;
 
 class Measure
 {
     private static ?SpanInterface $rootSpan = null;
+
     private static ?ScopeInterface $rootScope = null;
 
-    public function __construct(protected Application $app)
-    {
-    }
+    public function __construct(protected Application $app) {}
+
+    // ======================= Enable/Disable Management =======================
 
     public function enable(): void
     {
@@ -63,22 +63,31 @@ class Measure
     // ======================= Root Span Management =======================
 
     /**
-     * Start root span (for FrankenPHP mode)
+     * Start root span and set it as the current active span.
      */
-    public function startRootSpan(string $name, array $attributes = []): SpanInterface
+    public function startRootSpan(string $name, array $attributes = [], ?ContextInterface $parentContext = null): SpanInterface
     {
+        $parentContext = $parentContext ?: \OpenTelemetry\Context\Context::getRoot();
         $tracer = $this->tracer();
 
         $span = $tracer->spanBuilder($name)
             ->setSpanKind(SpanKind::KIND_SERVER)
+            ->setParent($parentContext)
             ->setAttributes($attributes)
             ->startSpan();
 
-        // Store span in context and activate
-        $scope = $span->storeInContext(\OpenTelemetry\Context\Context::getRoot())->activate();
+        // The activate() call returns a ScopeInterface object. We MUST hold on to this object
+        // and store it in a static property to prevent it from being garbage-collected prematurely.
+        $scope = $span->storeInContext($parentContext)->activate();
+        self::$rootScope = $scope;
+
+        Log::debug('OpenTelemetry: Starting root span', [
+            'name' => $name,
+            'attributes' => $attributes,
+            'trace_id' => $span->getContext()->getTraceId(),
+        ]);
 
         self::$rootSpan = $span;
-        self::$rootScope = $scope;
 
         return $span;
     }
@@ -120,17 +129,15 @@ class Measure
         }
     }
 
-    // ======================= General Span Creation =======================
+    // ======================= Core Span API =======================
 
     /**
      * Create span builder
      */
-    public function span(string $spanName, ?string $prefix = null): SpanBuilder
+    public function span(string $spanName): SpanBuilder
     {
-        $fullName = $prefix ? "{$prefix}.{$spanName}" : $spanName;
-
         return new SpanBuilder(
-            $this->tracer()->spanBuilder($fullName)
+            $this->tracer()->spanBuilder($spanName)
         );
     }
 
@@ -169,6 +176,7 @@ class Measure
         try {
             $result = $callback($span);
             $span->setStatus(StatusCode::STATUS_OK);
+
             return $result;
         } catch (\Throwable $e) {
             $span->recordException($e);
@@ -191,196 +199,7 @@ class Measure
         }
     }
 
-    // ======================= Semantic Shortcut Methods =======================
-
-    /**
-     * Create HTTP request span
-     */
-    public function http(Request $request, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::http($request);
-
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_SERVER)
-            ->setAttributes([
-                TraceAttributes::HTTP_REQUEST_METHOD => $request->method(),
-                TraceAttributes::URL_FULL => $request->fullUrl(),
-                TraceAttributes::URL_SCHEME => $request->getScheme(),
-                TraceAttributes::URL_PATH => $request->path(),
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create HTTP client request span
-     */
-    public function httpClient(string $method, string $url, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::httpClient($method, $url);
-
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setAttributes([
-                TraceAttributes::HTTP_REQUEST_METHOD => strtoupper($method),
-                TraceAttributes::URL_FULL => $url,
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create database query span
-     */
-    public function database(string $operation, ?string $table = null, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::database($operation, $table);
-
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setAttributes([
-                TraceAttributes::DB_OPERATION_NAME => strtoupper($operation),
-            ]);
-
-        if ($table) {
-            $spanBuilder->setAttributes([
-                TraceAttributes::DB_COLLECTION_NAME => $table,
-            ]);
-        }
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create Redis command span
-     */
-    public function redis(string $command, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::redis($command);
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setAttributes([
-                TraceAttributes::DB_SYSTEM => 'redis',
-                TraceAttributes::DB_OPERATION_NAME => strtoupper($command),
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create queue task span
-     */
-    public function queue(string $operation, ?string $jobClass = null, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::queue($operation, $jobClass);
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_CONSUMER)
-            ->setAttributes([
-                TraceAttributes::MESSAGING_OPERATION_TYPE => strtoupper($operation),
-                TraceAttributes::MESSAGING_DESTINATION_NAME => $jobClass ? class_basename($jobClass) : null,
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create cache operation span
-     */
-    public function cache(string $operation, ?string $key = null, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::cache($operation, $key);
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setAttributes(array_filter([
-                'cache.operation' => strtoupper($operation), // Cache-related attributes are not defined in TraceAttributes
-                'cache.key' => $key,
-            ]));
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create authentication span
-     */
-    public function auth(string $operation, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::auth($operation);
-        $spanBuilder = $this->span($spanName)
-            ->setAttributes([
-                'auth.operation' => strtoupper($operation), // Authentication-related attributes are not defined in TraceAttributes
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create event span
-     */
-    public function event(string $eventName, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::event($eventName);
-        $spanBuilder = $this->span($spanName)
-            ->setAttributes([
-                TraceAttributes::EVENT_NAME => $eventName,
-                'event.domain' => 'laravel', // Custom attribute, to identify this is a Laravel event
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    /**
-     * Create command span
-     */
-    public function command(string $commandName, ?Closure $callback = null): StartedSpan
-    {
-        $spanName = SpanNameHelper::command($commandName);
-        $spanBuilder = $this->span($spanName)
-            ->setSpanKind(SpanKind::KIND_INTERNAL)
-            ->setAttributes([
-                TraceAttributes::CODE_FUNCTION => 'handle',
-                TraceAttributes::CODE_NAMESPACE => $commandName,
-            ]);
-
-        if ($callback) {
-            $callback($spanBuilder);
-        }
-
-        return $spanBuilder->start();
-    }
-
-    // ======================= Event Recording Shortcut Methods =======================
+    // ======================= Event Recording =======================
 
     /**
      * Add event to current span
@@ -406,15 +225,15 @@ class Measure
         $this->activeSpan()->setStatus($code, $description);
     }
 
-    // ======================= OpenTelemetry Base API =======================
+    // ======================= Core OpenTelemetry API =======================
 
     /**
-     * Get the tracer instance.
+     * Get the tracer instance
      */
     public function tracer(): TracerInterface
     {
         if (! $this->isEnabled()) {
-            return new NoopTracer();
+            return new NoopTracer;
         }
 
         return $this->app->get(TracerInterface::class);
@@ -446,6 +265,8 @@ class Measure
         return SpanContextValidator::isValidTraceId($traceId) ? $traceId : null;
     }
 
+    // ======================= Context Propagation =======================
+
     /**
      * Get propagator
      */
@@ -473,20 +294,14 @@ class Measure
         return $this->propagator()->extract($headers);
     }
 
-    // ======================= Environment and Lifecycle Management =======================
+    // ======================= Environment Management =======================
 
     /**
      * Force flush (for Octane mode)
      */
     public function flush(): void
     {
-        if ($this->isOctane()) {
-            return;
-        }
-
-        $this->endRootSpan();
-
-        $this->app['opentelemetry.tracer.provider']?->forceFlush();
+        Globals::tracerProvider()->forceFlush();
     }
 
     /**
@@ -494,7 +309,7 @@ class Measure
      */
     public function isOctane(): bool
     {
-        return isset($_SERVER['LARAVEL_OCTANE']);
+        return isset($_SERVER['LARAVEL_OCTANE']) || isset($_ENV['LARAVEL_OCTANE']);
     }
 
     /**
@@ -505,9 +320,11 @@ class Measure
         $tracerProvider = Globals::tracerProvider();
         if (method_exists($tracerProvider, 'getSampler')) {
             $sampler = $tracerProvider->getSampler();
+
             // This is a simplified check. A more robust check might involve checking sampler decision.
             return ! ($sampler instanceof \OpenTelemetry\SDK\Trace\Sampler\NeverOffSampler);
         }
+
         // Fallback for NoopTracerProvider or other types
         return ! ($tracerProvider instanceof \OpenTelemetry\API\Trace\NoopTracerProvider);
     }

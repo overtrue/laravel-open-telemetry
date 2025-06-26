@@ -5,6 +5,24 @@
 
 This package provides a simple way to add OpenTelemetry to your Laravel application.
 
+## ⚠️ Breaking Changes in Recent Versions
+
+**SpanBuilder API Changes**: The `SpanBuilder::start()` method behavior has been updated for better safety and predictability:
+
+- **Before**: `start()` automatically activated the span's scope, which could cause issues in async scenarios
+- **Now**: `start()` only creates the span without activating its scope (safer default behavior)
+- **Migration**: If you need the old behavior, use `startAndActivate()` instead of `start()`
+
+```php
+// Old code (if you need scope activation)
+$span = Measure::span('my-operation')->start(); // This now returns SpanInterface
+
+// New code (for scope activation)
+$startedSpan = Measure::span('my-operation')->startAndActivate(); // Returns StartedSpan
+```
+
+For most use cases, the new `start()` behavior is safer and recommended. See the [Advanced Span Creation](#advanced-span-creation-with-spanbuilder) section for detailed usage patterns.
+
 ## Features
 
 - ✅ **Zero Configuration**: Works out of the box with sensible defaults.
@@ -142,38 +160,96 @@ The `trace` method will:
 - Automatically record and re-throw any exceptions that occur within the callback.
 - End the span when the callback completes.
 
+### Advanced Span Creation with SpanBuilder
+
+For more control over span lifecycle, you can use the `SpanBuilder` directly through `Measure::span()`. The SpanBuilder provides several methods for different use cases:
+
+#### Basic Span Creation (Recommended for most cases)
+
+```php
+// Create a span without activating its scope (safer for async operations)
+$span = Measure::span('my-operation')
+    ->setAttribute('operation.type', 'data-processing')
+    ->setSpanKind(SpanKind::KIND_INTERNAL)
+    ->start(); // Returns SpanInterface
+
+// Your business logic here
+$result = $this->processData();
+
+// Remember to end the span manually
+$span->end();
+```
+
+#### Span with Activated Scope
+
+```php
+// Create a span and activate its scope (for nested operations)
+$startedSpan = Measure::span('parent-operation')
+    ->setAttribute('operation.type', 'user-workflow')
+    ->setSpanKind(SpanKind::KIND_INTERNAL)
+    ->startAndActivate(); // Returns StartedSpan
+
+// Any spans created within this block will be children of this span
+$childSpan = Measure::span('child-operation')->start();
+$childSpan->end();
+
+// The StartedSpan automatically manages scope cleanup
+$startedSpan->end(); // Ends span and detaches scope
+```
+
+#### Span with Context (For Manual Propagation)
+
+```php
+// Create a span and get both span and context for manual management
+[$span, $context] = Measure::span('async-operation')
+    ->setAttribute('operation.async', true)
+    ->startWithContext(); // Returns [SpanInterface, ContextInterface]
+
+// Use context for propagation (e.g., in HTTP headers)
+$headers = Measure::propagationHeaders($context);
+
+// Your async operation here
+$span->end();
+```
+
 ### Using Semantic Spans
 
 To promote standardization, the package provides semantic helper methods that create spans with attributes conforming to OpenTelemetry's [Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/).
 
 #### Database Spans
 ```php
-use OpenTelemetry\SemConv\TraceAttributes;
-
 // Manually trace a block of database operations
-$user = Measure::database('repository:find-user', function ($span) use ($userId) {
-    $span->setAttribute(TraceAttributes::DB_STATEMENT, "SELECT * FROM users WHERE id = ?");
+$user = Measure::database('SELECT', 'users'); // Quick shortcut for database operations
+// Or use the general trace method for more complex operations
+$user = Measure::trace('repository:find-user', function ($span) use ($userId) {
+    $span->setAttribute('db.statement', "SELECT * FROM users WHERE id = ?");
+    $span->setAttribute('db.table', 'users');
     return User::find($userId);
 });
 ```
 *Note: If `QueryWatcher` is enabled, individual queries are already traced. This is useful for tracing a larger transaction or a specific business operation involving multiple queries.*
 
-#### Cache Spans
+#### HTTP Client Spans
 ```php
-$user = Measure::cache('fetch-user-from-cache', function ($span) use ($userId) {
-    $span->setAttributes([
-        'cache.key' => "user:{$userId}",
-        'cache.ttl' => 3600,
-    ]);
-    return Cache::remember("user:{$userId}", 3600, fn() => User::find($userId));
+// Quick shortcut for HTTP client requests
+$response = Measure::httpClient('POST', 'https://api.example.com/users');
+// Or use the general trace method for more control
+$response = Measure::trace('api-call', function ($span) {
+    $span->setAttribute('http.method', 'POST');
+    $span->setAttribute('http.url', 'https://api.example.com/users');
+    return Http::post('https://api.example.com/users', $data);
 });
 ```
 
-#### Queue Spans
+#### Custom Spans
 ```php
-// Manually trace putting a job on the queue
-Measure::queue('dispatch-welcome-email', function() use ($user) {
-    WelcomeEmailJob::dispatch($user);
+// For any custom operation, use the general trace method
+$result = Measure::trace('process-payment', function ($span) use ($payment) {
+    $span->setAttribute('payment.amount', $payment->amount);
+    $span->setAttribute('payment.currency', $payment->currency);
+
+    // Your business logic here
+    return $this->processPayment($payment);
 });
 ```
 
@@ -221,7 +297,7 @@ Or apply it globally in `app/Http/Kernel.php`:
 protected $middlewareGroups = [
     'web' => [
         // ...
-        \Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceIdMiddleware::class,
+        \Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId::class,
     ],
     // ...
 ];

@@ -12,7 +12,7 @@ class TickReceivedHandler
      */
     public function handle(TickReceived $event): void
     {
-        // 创建子 span 来跟踪定时任务
+        // Create child span to track tick event
         $span = Measure::start('octane.tick', function ($spanBuilder) {
             $spanBuilder->setAttributes([
                 'tick.timestamp' => time(),
@@ -20,7 +20,7 @@ class TickReceivedHandler
             ]);
         });
 
-        // 定时任务通常很快完成，立即结束 span
+        // Tick events are usually quick, end span immediately
         $span->end();
     }
 }

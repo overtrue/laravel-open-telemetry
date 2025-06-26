@@ -128,14 +128,14 @@ class ConfigTest extends TestCase
         }
     }
 
-    public function testDefaultConfig(): void
+    public function test_default_config(): void
     {
         $this->assertTrue(config('otel.enabled'));
         $this->assertIsArray(config('otel.watchers'));
         $this->assertNotEmpty(config('otel.watchers'));
     }
 
-    public function testEnabledConfigurationDisablesRegistration(): void
+    public function test_enabled_configuration_disables_registration(): void
     {
         // Set OpenTelemetry as disabled
         Config::set('otel.enabled', false);
@@ -152,7 +152,7 @@ class ConfigTest extends TestCase
         // If we reach here without any watchers being registered, the test passes
     }
 
-    public function testEnabledConfigurationAllowsRegistration(): void
+    public function test_enabled_configuration_allows_registration(): void
     {
         // Ensure OpenTelemetry is enabled
         Config::set('otel.enabled', true);
@@ -161,14 +161,14 @@ class ConfigTest extends TestCase
         $this->assertTrue(config('otel.enabled'));
     }
 
-    public function testMiddlewareConfiguration(): void
+    public function test_middleware_configuration(): void
     {
         $this->assertTrue(config('otel.middleware.trace_id.enabled'));
         $this->assertTrue(config('otel.middleware.trace_id.global'));
         $this->assertEquals('X-Trace-Id', config('otel.middleware.trace_id.header_name'));
     }
 
-    public function testWatchersConfiguration(): void
+    public function test_watchers_configuration(): void
     {
         $watchers = config('otel.watchers');
 
@@ -178,7 +178,7 @@ class ConfigTest extends TestCase
         $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, $watchers);
     }
 
-    public function testHeadersConfiguration(): void
+    public function test_headers_configuration(): void
     {
         $allowedHeaders = config('otel.allowed_headers');
         $sensitiveHeaders = config('otel.sensitive_headers');

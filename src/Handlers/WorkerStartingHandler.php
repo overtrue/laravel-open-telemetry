@@ -18,12 +18,12 @@ class WorkerStartingHandler
     public function handle(WorkerStarting $event): void
     {
         // Only handle in Octane mode
-        if (!Measure::isOctane()) {
+        if (! Measure::isOctane()) {
             return;
         }
 
         // Validate OTEL environment variables
-        if (!config('otel.enabled', true)) {
+        if (! config('otel.enabled', true)) {
             return;
         }
 
@@ -33,7 +33,7 @@ class WorkerStartingHandler
         // Worker initialization logic can be added here
         // For example, setting up worker-specific spans or contexts
 
-        Log::info('WorkerStarting called');
+        Log::debug('OpenTelemetry Octane: Worker starting handler called');
 
         // 验证OTEL环境变量
         $otelVars = [
@@ -44,9 +44,15 @@ class WorkerStartingHandler
 
         foreach ($otelVars as $var) {
             if (! isset($_ENV[$var]) && ! isset($_SERVER[$var])) {
-                \Log::warning("Missing OpenTelemetry environment variable: {$var}");
+                Log::warning('OpenTelemetry Octane: Missing required environment variable', [
+                    'variable' => $var,
+                ]);
             } else {
-                \Log::info("OpenTelemetry environment variable {$var} is set to {$_ENV[$var]}.");
+                $value = $_ENV[$var] ?? $_SERVER[$var] ?? 'unknown';
+                Log::debug('OpenTelemetry Octane: Environment variable configured', [
+                    'variable' => $var,
+                    'value' => $value,
+                ]);
             }
         }
     }

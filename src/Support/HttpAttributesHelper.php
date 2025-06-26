@@ -85,7 +85,7 @@ class HttpAttributesHelper
 
             // Check if header is allowed
             if (self::isHeaderAllowed($headerName, $allowedHeaders)) {
-                $attributeName = 'http.request.header.' . str_replace('-', '_', $headerName);
+                $attributeName = 'http.request.header.'.str_replace('-', '_', $headerName);
 
                 // Check if header is sensitive
                 if (self::isHeaderSensitive($headerName, $sensitiveHeaders)) {
@@ -117,7 +117,7 @@ class HttpAttributesHelper
 
             // Check if header is allowed
             if (self::isHeaderAllowed($headerName, $allowedHeaders)) {
-                $attributeName = 'http.response.header.' . str_replace('-', '_', $headerName);
+                $attributeName = 'http.response.header.'.str_replace('-', '_', $headerName);
 
                 // Check if header is sensitive
                 if (self::isHeaderSensitive($headerName, $sensitiveHeaders)) {
@@ -222,6 +222,7 @@ class HttpAttributesHelper
             $route = $request->route();
             if ($route) {
                 $uri = $route->uri();
+
                 return $uri === '/' ? '' : $uri;
             }
         } catch (Throwable $throwable) {
@@ -252,6 +253,7 @@ class HttpAttributesHelper
         foreach ($request->headers->all() as $name => $values) {
             $carrier[strtolower($name)] = $values[0] ?? '';
         }
+
         return $carrier;
     }
 }

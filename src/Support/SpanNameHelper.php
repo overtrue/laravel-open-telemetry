@@ -66,6 +66,7 @@ class SpanNameHelper
         if ($jobClass) {
             // Extract class name (remove namespace)
             $className = class_basename($jobClass);
+
             return sprintf('QUEUE %s %s', strtoupper($operation), $className);
         }
 
@@ -89,7 +90,8 @@ class SpanNameHelper
     {
         if ($key) {
             // Limit key length to avoid overly long span names
-            $shortKey = strlen($key) > 50 ? substr($key, 0, 47) . '...' : $key;
+            $shortKey = strlen($key) > 50 ? substr($key, 0, 47).'...' : $key;
+
             return sprintf('CACHE %s %s', strtoupper($operation), $shortKey);
         }
 
@@ -104,6 +106,7 @@ class SpanNameHelper
     {
         // Simplify event name, remove namespace prefix
         $shortEventName = str_replace(['Illuminate\\', 'App\\Events\\'], '', $eventName);
+
         return sprintf('EVENT %s', $shortEventName);
     }
 
@@ -114,6 +117,7 @@ class SpanNameHelper
     public static function exception(string $exceptionClass): string
     {
         $className = class_basename($exceptionClass);
+
         return sprintf('EXCEPTION %s', $className);
     }
 

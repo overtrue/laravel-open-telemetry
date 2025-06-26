@@ -2,8 +2,8 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
-use Overtrue\LaravelOpenTelemetry\Support\Measure;
 use OpenTelemetry\API\Trace\SpanInterface;
+use Overtrue\LaravelOpenTelemetry\Support\Measure;
 
 class MeasureRefactorTest extends TestCase
 {

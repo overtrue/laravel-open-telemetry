@@ -38,27 +38,31 @@ class EventWatcher extends Watcher
         'Illuminate\Http\Client\Events\ConnectionFailed',
     ];
 
+    public array $events = [
+        // ...
+    ];
+
     public function register(Application $app): void
     {
         $app['events']->listen('*', [$this, 'recordEvent']);
     }
 
-    public function recordEvent(string $eventName, array $payload): void
+    public function recordEvent($event): void
     {
-        if ($this->shouldSkip($eventName)) {
+        if ($this->shouldSkip($event)) {
             return;
         }
 
         $attributes = [
-            'event.payload_count' => count($payload),
+            'event.payload_count' => is_array($event) ? count($event) : 0,
         ];
 
-        $firstPayload = $payload[0] ?? null;
+        $firstPayload = is_array($event) ? ($event[0] ?? null) : null;
         if (is_object($firstPayload)) {
             $attributes['event.object_type'] = get_class($firstPayload);
         }
 
-        Measure::addEvent($eventName, $attributes);
+        Measure::addEvent($event, $attributes);
     }
 
     protected function shouldSkip(string $eventName): bool

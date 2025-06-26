@@ -54,13 +54,14 @@ class TestCommand extends Command
 
         // Create a test span to check what type we get
         $rootSpan = Measure::start('Test Span');
-        $spanClass = get_class($rootSpan->span);
+        $span = $rootSpan->getSpan();
+        $spanClass = get_class($span);
 
         $this->info("Current Span type: {$spanClass}");
         $this->info('');
 
         // Check if we have a recording span
-        if ($rootSpan->span instanceof NonRecordingSpan || ! Measure::isRecording()) {
+        if ($span instanceof NonRecordingSpan || ! Measure::isRecording()) {
             $this->warn('⚠️  OpenTelemetry is using NonRecordingSpan!');
             $this->info('');
             $this->info('This means OpenTelemetry SDK is not properly configured.');
@@ -93,9 +94,9 @@ class TestCommand extends Command
 
         $this->info('');
 
-        $rootSpan->span->setAttribute('test.attribute', 'test_value');
+        $rootSpan->setAttribute('test.attribute', 'test_value');
         $timestamp = time();
-        $rootSpan->span->setAttribute('timestamp', $timestamp);
+        $rootSpan->setAttribute('timestamp', $timestamp);
 
         // Simulate delay
         $this->info('Creating child span...');
@@ -103,7 +104,7 @@ class TestCommand extends Command
 
         // Add child span
         $childSpan = Measure::start('Child Operation');
-        $childSpan->span->setAttribute('child.attribute', 'child_value');
+        $childSpan->setAttribute('child.attribute', 'child_value');
 
         sleep(1);
 
@@ -112,16 +113,16 @@ class TestCommand extends Command
         $this->info('Child span completed.');
 
         // Record event
-        $rootSpan->span->addEvent('Test Event', [
+        $rootSpan->addEvent('Test Event', [
             'detail' => 'This is a test event',
             'timestamp' => $timestamp,
         ]);
 
         // Set status
-        $rootSpan->span->setStatus(StatusCode::STATUS_OK);
+        $span->setStatus(StatusCode::STATUS_OK);
 
         // Get trace ID before ending the root span
-        $traceId = $rootSpan->span->getContext()->getTraceId();
+        $traceId = $span->getContext()->getTraceId();
 
         // End root span
         Measure::end();

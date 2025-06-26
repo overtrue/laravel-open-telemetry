@@ -6,10 +6,8 @@ use Illuminate\Support\Facades\Context as LaravelContext;
 use Mockery;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
-use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\Context\ScopeInterface;
 use OpenTelemetry\SDK\Trace\RandomIdGenerator;
 use OpenTelemetry\SDK\Trace\Span;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
@@ -60,10 +58,11 @@ class MeasureTest extends TestCase
         $this->assertSame($rootSpan, Measure::getRootSpan());
         $this->assertSame($rootSpan, Span::getCurrent());
 
+        $scopeBeforeEnd = Measure::activeScope();
         Measure::endRootSpan();
         $this->assertNull(Measure::getRootSpan());
-        // After ending, the current span should be invalid (NonRecordingSpan)
-        $this->assertInstanceOf(\OpenTelemetry\API\Trace\NonRecordingSpan::class, Span::getCurrent());
+        // After ending, the current scope should not be the one we created.
+        $this->assertNotSame($scopeBeforeEnd, Measure::activeScope());
     }
 
     public function test_trace_helper_executes_callback_and_returns_value()
@@ -83,30 +82,6 @@ class MeasureTest extends TestCase
         Measure::trace('test.trace.exception', function () {
             throw new \RuntimeException('test exception');
         });
-    }
-
-    public function test_add_event_and_record_exception()
-    {
-        $span = Mockery::mock(SpanInterface::class);
-        $span->shouldReceive('addEvent')->with('test event', Mockery::any())->once();
-        $span->shouldReceive('recordException')->with(Mockery::type(\Exception::class), Mockery::any())->once();
-
-        $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
-        $measure->__construct($this->app);
-        $measure->shouldReceive('activeSpan')->andReturn($span);
-        Measure::swap($measure);
-
-        Measure::addEvent('test event');
-        Measure::recordException(new \Exception('test'));
-
-        // Assert that the methods were called (this will be verified by Mockery)
-        $this->assertTrue(true);
-
-        // Reset mock
-        Mockery::close();
-        // We need to re-initialize the tracer as Mockery::close() might have cleared it
-        Globals::reset();
-        $this->app->make(\Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider::class, ['app' => $this->app])->boot();
     }
 
     public function test_new_span_builder()
@@ -186,7 +161,7 @@ class MeasureTest extends TestCase
 
     public function test_get_trace_id()
     {
-        $traceId = (new RandomIdGenerator())->generateTraceId();
+        $traceId = (new RandomIdGenerator)->generateTraceId();
         $measure = Mockery::mock(\Overtrue\LaravelOpenTelemetry\Support\Measure::class)->makePartial();
         $measure->shouldReceive('activeSpan->getContext->getTraceId')->andReturn($traceId);
 

@@ -4,13 +4,13 @@ namespace Overtrue\LaravelOpenTelemetry\Tests\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceIdMiddleware;
+use Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
 
-class TraceIdMiddlewareTest extends TestCase
+class AddTraceIdTest extends TestCase
 {
-        protected function tearDown(): void
+    protected function tearDown(): void
     {
         // 确保每个测试后清理状态
         $measure = $this->app->make(Measure::class);
@@ -28,7 +28,7 @@ class TraceIdMiddlewareTest extends TestCase
         $rootSpan = $measure->startRootSpan('test-span');
         $traceId = $rootSpan->getContext()->getTraceId();
 
-        $middleware = new TraceIdMiddleware();
+        $middleware = new AddTraceId;
         $request = Request::create('/test');
 
         $response = $middleware->handle($request, function ($request) {
@@ -49,7 +49,7 @@ class TraceIdMiddlewareTest extends TestCase
         $rootSpan = $measure->startRootSpan('test-span');
         $traceId = $rootSpan->getContext()->getTraceId();
 
-        $middleware = new TraceIdMiddleware();
+        $middleware = new AddTraceId;
         $request = Request::create('/test');
 
         $response = $middleware->handle($request, function ($request) {
@@ -62,13 +62,13 @@ class TraceIdMiddlewareTest extends TestCase
         $this->assertFalse($response->headers->has('X-Trace-Id'));
     }
 
-        public function test_does_not_add_header_when_no_trace_exists()
+    public function test_does_not_add_header_when_no_trace_exists()
     {
         // 确保没有根 span
         $measure = $this->app->make(Measure::class);
         $measure->reset(); // 清理任何现有的 span
 
-        $middleware = new TraceIdMiddleware();
+        $middleware = new AddTraceId;
         $request = Request::create('/test');
 
         $response = $middleware->handle($request, function ($request) {

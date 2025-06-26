@@ -1,42 +1,42 @@
 <?php
 
 /**
- * 改进后的 Measure API 使用示例
- * 展示了更灵活和语义化的追踪方式，并使用 OpenTelemetry 标准语义约定
+ * Improved Measure API Usage Examples
+ * Demonstrates more flexible and semantic tracing approaches using OpenTelemetry standard semantic conventions
  */
 
 use Illuminate\Http\Request;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
-// ======================= 原来的使用方式 =======================
+// ======================= Previous Usage Pattern =======================
 
-// 之前：手动创建和管理 span
+// Before: Manually creating and managing spans
 $span = Measure::start('user.create');
 $span->setAttributes(['user.id' => 123]);
-// ... 业务逻辑
+// ... business logic
 $span->end();
 
-// ======================= 改进后的使用方式 =======================
+// ======================= Improved Usage Patterns =======================
 
-// 1. 使用 trace() 方法自动管理 span 生命周期
+// 1. Use trace() method for automatic span lifecycle management
 $user = Measure::trace('user.create', function ($span) {
     $span->setAttributes([
         TraceAttributes::ENDUSER_ID => 123,
-        'user.action' => 'registration'
+        'user.action' => 'registration',
     ]);
 
-    // 业务逻辑
-    $user = new User();
+    // Business logic
+    $user = new User;
     $user->save();
 
     return $user;
 }, ['initial.context' => 'registration']);
 
-// 2. 语义化的 HTTP 请求追踪
+// 2. Semantic HTTP request tracing
 Route::middleware('api')->group(function () {
     Route::get('/users', function (Request $request) {
-        // 自动创建 HTTP span 并设置相关属性
+        // Automatically create HTTP span and set related attributes
         $span = Measure::http($request, function ($spanBuilder) {
             $spanBuilder->setAttributes([
                 'user.authenticated' => auth()->check(),
@@ -51,9 +51,9 @@ Route::middleware('api')->group(function () {
     });
 });
 
-// 3. 数据库操作追踪（使用标准语义约定）
+// 3. Database operation tracing (using standard semantic conventions)
 $users = Measure::trace('user.query', function ($span) {
-    // 使用标准的数据库语义约定属性
+    // Use standard database semantic convention attributes
     $span->setAttributes([
         TraceAttributes::DB_SYSTEM => 'mysql',
         TraceAttributes::DB_NAMESPACE => 'myapp',
@@ -64,7 +64,7 @@ $users = Measure::trace('user.query', function ($span) {
     return User::where('active', true)->get();
 });
 
-// 4. HTTP 客户端请求追踪
+// 4. HTTP client request tracing
 $response = Measure::httpClient('GET', 'https://api.example.com/users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         'api.client' => 'laravel-http',
@@ -72,7 +72,7 @@ $response = Measure::httpClient('GET', 'https://api.example.com/users', function
     ]);
 });
 
-// 5. 队列任务处理（使用标准消息传递语义约定）
+// 5. Queue job processing (using standard messaging semantic conventions)
 dispatch(function () {
     Measure::queue('process', 'EmailJob', function ($spanBuilder) {
         $spanBuilder->setAttributes([
@@ -83,7 +83,7 @@ dispatch(function () {
     });
 });
 
-// 6. Redis 操作追踪
+// 6. Redis operation tracing
 $value = Measure::redis('GET', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::DB_SYSTEM => 'redis',
@@ -92,7 +92,7 @@ $value = Measure::redis('GET', function ($spanBuilder) {
     ]);
 });
 
-// 7. 缓存操作追踪
+// 7. Cache operation tracing
 $user = Measure::cache('get', 'user:123', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         'cache.store' => 'redis',
@@ -100,7 +100,7 @@ $user = Measure::cache('get', 'user:123', function ($spanBuilder) {
     ]);
 });
 
-// 8. 事件记录（使用标准事件语义约定）
+// 8. Event recording (using standard event semantic conventions)
 Measure::event('user.registered', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::EVENT_NAME => 'user.registered',
@@ -109,7 +109,7 @@ Measure::event('user.registered', function ($spanBuilder) {
     ]);
 });
 
-// 9. 控制台命令追踪
+// 9. Console command tracing
 Artisan::command('users:cleanup', function () {
     Measure::command('users:cleanup', function ($spanBuilder) {
         $spanBuilder->setAttributes([
@@ -119,11 +119,11 @@ Artisan::command('users:cleanup', function () {
     });
 });
 
-// ======================= 异常处理和事件记录 =======================
+// ======================= Exception Handling and Event Recording =======================
 
 try {
     $result = Measure::trace('risky.operation', function ($span) {
-        // 可能会抛出异常的操作
+        // Operation that might throw an exception
         $span->setAttributes([
             'operation.type' => 'data_processing',
         ]);
@@ -131,19 +131,19 @@ try {
         return processData();
     });
 } catch (\Exception $e) {
-    // 异常会自动记录到 span 中
+    // Exception will be automatically recorded in the span
     Measure::recordException($e);
 }
 
-// 手动添加事件到当前 span
+// Manually add events to current span
 Measure::addEvent('checkpoint.reached', [
     'checkpoint.name' => 'data_validation',
     'checkpoint.status' => 'passed',
 ]);
 
-// ======================= 批量操作示例 =======================
+// ======================= Batch Operation Examples =======================
 
-// 批量数据库操作
+// Batch database operations
 Measure::database('BATCH_INSERT', 'users', function ($spanBuilder) {
     $spanBuilder->setAttributes([
         TraceAttributes::DB_OPERATION_BATCH_SIZE => 100,
@@ -152,9 +152,9 @@ Measure::database('BATCH_INSERT', 'users', function ($spanBuilder) {
     ]);
 });
 
-// ======================= 性能监控示例 =======================
+// ======================= Performance Monitoring Examples =======================
 
-// 监控 API 响应时间
+// Monitor API response time
 $users = Measure::trace('api.users.list', function ($span) {
     $span->setAttributes([
         TraceAttributes::HTTP_REQUEST_METHOD => 'GET',
@@ -174,13 +174,13 @@ $users = Measure::trace('api.users.list', function ($span) {
     return $users;
 });
 
-// ======================= 分布式追踪示例 =======================
+// ======================= Distributed Tracing Examples =======================
 
-// 在微服务之间传播 trace context
+// Propagate trace context between microservices
 $headers = Measure::propagationHeaders();
 
-// 发送 HTTP 请求时包含追踪头
+// Include tracing headers when sending HTTP requests
 $response = Http::withHeaders($headers)->get('https://service.example.com/api');
 
-// 接收请求时提取 trace context
+// Extract trace context when receiving requests
 $context = Measure::extractContextFromPropagationHeaders($request->headers->all());

@@ -10,10 +10,10 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
-use Overtrue\LaravelOpenTelemetry\Watchers\Watcher;
 
 /**
  * Queue Watcher
@@ -37,6 +37,7 @@ class QueueWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::queue('publish', $jobClass))
             ->setSpanKind(SpanKind::KIND_PRODUCER)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $attributes = [
@@ -62,6 +63,7 @@ class QueueWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::queue('process', $jobClass))
             ->setSpanKind(SpanKind::KIND_CONSUMER)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $attributes = [

@@ -1,63 +1,65 @@
 <?php
 
 /**
- * Laravel OpenTelemetry 中间件使用示例
+ * Laravel OpenTelemetry Middleware Usage Examples
  *
- * 此示例展示了如何使用标准 OpenTelemetry 环境变量配置和中间件功能
+ * This example demonstrates how to use standard OpenTelemetry environment variables
+ * and middleware functionality
  */
 
-// 1. 首先在 .env 文件中配置 OpenTelemetry（使用标准环境变量）
+// 1. First, configure OpenTelemetry in .env file (using standard environment variables)
 /*
-# 启用 OpenTelemetry PHP SDK 自动加载
+# Enable OpenTelemetry PHP SDK auto-loading
 OTEL_PHP_AUTOLOAD_ENABLED=true
 
-# 服务标识
+# Service identification
 OTEL_SERVICE_NAME=my-laravel-app
 OTEL_SERVICE_VERSION=1.0.0
 
-# 导出器配置
-OTEL_TRACES_EXPORTER=console  # 开发环境使用 console，生产环境使用 otlp
+# Exporter configuration
+OTEL_TRACES_EXPORTER=console  # Use console for development, otlp for production
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
-# 上下文传播
+# Context propagation
 OTEL_PROPAGATORS=tracecontext,baggage
 
-# Laravel 包特定配置
+# Laravel package specific configuration
 OTEL_TRACE_ID_MIDDLEWARE_ENABLED=true
 OTEL_TRACE_ID_MIDDLEWARE_GLOBAL=false
 OTEL_TRACE_ID_HEADER_NAME=X-Trace-Id
+OTEL_HTTP_CLIENT_PROPAGATION_ENABLED=true
 */
 
-// 2. 发布配置文件（可选）
+// 2. Publish configuration file (optional)
 // php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider" --tag=config
 
-// 注意：在非 Octane 模式下，OpenTelemetry 根 span 中间件会自动全局启用
-// 该中间件使用 prependMiddleware 注册，确保在所有其他中间件之前执行
-// 在 Octane 模式下，根 span 由事件处理器自动创建
-// 你不需要手动添加任何中间件来创建根 span
+// Note: In non-Octane mode, OpenTelemetry root span middleware is automatically enabled globally
+// This middleware is registered using prependMiddleware to ensure it executes before all other middleware
+// In Octane mode, root spans are automatically created by event handlers
+// You don't need to manually add any middleware to create root spans
 
-// 3. 在控制器中使用追踪
+// 3. Using tracing in controllers
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 class UserController extends Controller
 {
     public function index()
     {
-        // 创建自定义 span
+        // Create custom span
         $span = Measure::start('user.list');
 
         try {
-            // 添加自定义属性
+            // Add custom attributes
             $span->setAttributes([
                 'user.count' => User::count(),
                 'request.ip' => request()->ip(),
             ]);
 
-            // 执行业务逻辑
+            // Execute business logic
             $users = User::paginate(15);
 
-            // 添加事件
+            // Add events
             $span->addEvent('users.fetched', [
                 'count' => $users->count(),
             ]);
@@ -65,18 +67,18 @@ class UserController extends Controller
             return response()->json($users);
 
         } catch (\Exception $e) {
-            // 记录异常
+            // Record exception
             $span->recordException($e);
             throw $e;
         } finally {
-            // 结束 span
+            // End span
             $span->end();
         }
     }
 
     public function show($id)
     {
-        // 使用回调方式创建 span
+        // Use callback approach to create span
         return Measure::start('user.show', function ($span) use ($id) {
             $span->setAttributes(['user.id' => $id]);
 
@@ -91,7 +93,7 @@ class UserController extends Controller
     }
 }
 
-// 4. 在服务类中使用嵌套追踪
+// 4. Using nested tracing in service classes
 class UserService
 {
     public function createUser(array $data)
@@ -101,12 +103,12 @@ class UserService
                 'user.email' => $data['email'],
             ]);
 
-            // 创建嵌套 span
+            // Create nested span
             $validationSpan = Measure::start('user.validate');
             $this->validateUserData($data);
             $validationSpan->end();
 
-            // 另一个嵌套 span
+            // Another nested span
             $dbSpan = Measure::start('user.save');
             $user = User::create($data);
             $dbSpan->setAttributes(['user.id' => $user->id]);
@@ -122,11 +124,11 @@ class UserService
 
     private function validateUserData(array $data)
     {
-        // 验证逻辑...
+        // Validation logic...
     }
 }
 
-// 5. 获取当前追踪信息
+// 5. Getting current trace information
 class ApiController extends Controller
 {
     public function status()
@@ -139,7 +141,7 @@ class ApiController extends Controller
     }
 }
 
-// 6. 在中间件中使用
+// 6. Using in middleware
 class CustomMiddleware
 {
     public function handle($request, Closure $next)
@@ -164,9 +166,9 @@ class CustomMiddleware
     }
 }
 
-// 7. 生产环境配置示例
+// 7. Production environment configuration example
 /*
-# 生产环境 .env 配置
+# Production .env configuration
 OTEL_PHP_AUTOLOAD_ENABLED=true
 OTEL_SERVICE_NAME=my-production-app
 OTEL_SERVICE_VERSION=2.1.0
@@ -175,22 +177,65 @@ OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.company.com:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_PROPAGATORS=tracecontext,baggage
 
-# 采样配置
+# Sampling configuration
 OTEL_TRACES_SAMPLER=traceidratio
 OTEL_TRACES_SAMPLER_ARG=0.1
 
-# 资源属性
+# Resource attributes
 OTEL_RESOURCE_ATTRIBUTES=service.namespace=production,deployment.environment=prod
 */
 
-// 8. 开发环境配置示例
+// 8. Development environment configuration example
 /*
-# 开发环境 .env 配置
+# Development .env configuration
 OTEL_PHP_AUTOLOAD_ENABLED=true
 OTEL_SERVICE_NAME=my-dev-app
 OTEL_TRACES_EXPORTER=console
 OTEL_PROPAGATORS=tracecontext,baggage
 
-# 开发时显示所有 trace
+# Show all traces during development
 OTEL_TRACES_SAMPLER=always_on
+*/
+
+// 9. Automatic HTTP Client Tracing
+/*
+With the new automatic HTTP client tracing, all HTTP requests made through Laravel's Http facade
+are automatically traced with proper context propagation. No manual configuration needed!
+
+Example:
+*/
+use Illuminate\Support\Facades\Http;
+
+class ExternalApiService
+{
+    public function fetchUsers()
+    {
+        // This request is automatically traced with context propagation
+        $response = Http::get('https://api.example.com/users');
+
+        return $response->json();
+    }
+
+    public function createUser(array $userData)
+    {
+        // This POST request is also automatically traced
+        $response = Http::post('https://api.example.com/users', $userData);
+
+        return $response->json();
+    }
+}
+
+// 10. Disabling automatic HTTP client propagation (if needed)
+/*
+If you need to disable automatic HTTP client propagation for specific scenarios:
+
+In .env:
+OTEL_HTTP_CLIENT_PROPAGATION_ENABLED=false
+
+Or in config/otel.php:
+'http_client' => [
+    'propagation_middleware' => [
+        'enabled' => false,
+    ],
+],
 */

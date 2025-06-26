@@ -10,7 +10,7 @@ use Illuminate\Cache\Events\KeyForgotten;
 use Illuminate\Cache\Events\KeyWritten;
 use Illuminate\Contracts\Foundation\Application;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\SemConv\TraceAttributes;
+use OpenTelemetry\Context\Context;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
@@ -29,6 +29,7 @@ class CacheWatcher extends Watcher
         $span = Measure::tracer()
             ->spanBuilder(SpanNameHelper::cache($operation, $event->key))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $attributes = [

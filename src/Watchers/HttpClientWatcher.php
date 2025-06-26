@@ -13,6 +13,7 @@ use Illuminate\Http\Client\Response;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
@@ -27,13 +28,25 @@ class HttpClientWatcher extends Watcher
 
     public function register(Application $app): void
     {
+        // Register event listeners for span creation
         $app['events']->listen(RequestSending::class, [$this, 'recordRequest']);
         $app['events']->listen(ConnectionFailed::class, [$this, 'recordConnectionFailed']);
         $app['events']->listen(ResponseReceived::class, [$this, 'recordResponse']);
+
+        // Register global HTTP client middleware for automatic context propagation
+        $this->registerHttpClientMiddleware($app);
     }
 
     public function recordRequest(RequestSending $request): void
     {
+        // Check if request already has GuzzleTraceMiddleware by inspecting headers
+        // If there are OpenTelemetry propagation headers, it means GuzzleTraceMiddleware is already handling this request
+        $headers = $request->request->headers();
+        if ($this->hasTracingMiddleware($headers)) {
+            // Skip automatic tracing if manual tracing middleware is already present
+            return;
+        }
+
         $parsedUrl = collect(parse_url($request->request->url()) ?: []);
         $processedUrl = $parsedUrl->get('scheme', 'http').'://'.$parsedUrl->get('host').$parsedUrl->get('path', '');
 
@@ -44,6 +57,7 @@ class HttpClientWatcher extends Watcher
         $tracer = Measure::tracer();
         $span = $tracer->spanBuilder(SpanNameHelper::httpClient($request->request->method(), $processedUrl))
             ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setParent(Context::getCurrent())  // ✅ 修复：使用当前 context 作为父 context
             ->setAttributes([
                 TraceAttributes::HTTP_REQUEST_METHOD => $request->request->method(),
                 TraceAttributes::URL_FULL => $processedUrl,
@@ -118,7 +132,7 @@ class HttpClientWatcher extends Watcher
 
             // Check if header is allowed
             if ($this->isHeaderAllowed($headerName, $allowedHeaders)) {
-                $attributeName = 'http.request.header.' . str_replace('-', '_', $headerName);
+                $attributeName = 'http.request.header.'.str_replace('-', '_', $headerName);
 
                 // Check if header is sensitive
                 if ($this->isHeaderSensitive($headerName, $sensitiveHeaders)) {
@@ -150,7 +164,7 @@ class HttpClientWatcher extends Watcher
 
             // Check if header is allowed
             if ($this->isHeaderAllowed($headerName, $allowedHeaders)) {
-                $attributeName = 'http.response.header.' . str_replace('-', '_', $headerName);
+                $attributeName = 'http.response.header.'.str_replace('-', '_', $headerName);
 
                 // Check if header is sensitive
                 if ($this->isHeaderSensitive($headerName, $sensitiveHeaders)) {
@@ -210,5 +224,54 @@ class HttpClientWatcher extends Watcher
             StatusCode::STATUS_ERROR,
             HttpResponse::$statusTexts[$response->status()] ?? (string) $response->status()
         );
+    }
+
+    /**
+     * Check if the request already has tracing middleware by looking for OpenTelemetry propagation headers
+     */
+    private function hasTracingMiddleware(array $headers): bool
+    {
+        // Common OpenTelemetry propagation headers
+        $tracingHeaders = [
+            'traceparent',
+            'tracestate',
+            'x-trace-id',
+            'x-span-id',
+            'b3',
+            'x-b3-traceid',
+            'x-b3-spanid',
+        ];
+
+        foreach ($tracingHeaders as $headerName) {
+            if (isset($headers[$headerName]) || isset($headers[ucfirst($headerName)]) || isset($headers[strtoupper($headerName)])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Register HTTP client middleware for automatic context propagation
+     */
+    protected function registerHttpClientMiddleware(Application $app): void
+    {
+        // Check if HTTP client propagation middleware is enabled
+        if (! config('otel.http_client.propagation_middleware.enabled', true)) {
+            return;
+        }
+
+        // Register global request middleware to automatically add propagation headers
+        \Illuminate\Support\Facades\Http::globalRequestMiddleware(function ($request) {
+            // 获取当前上下文的传播头
+            $propagationHeaders = Measure::propagationHeaders();
+
+            // 为每个传播头添加到请求中
+            foreach ($propagationHeaders as $name => $value) {
+                $request = $request->withHeader($name, $value);
+            }
+
+            return $request;
+        });
     }
 }

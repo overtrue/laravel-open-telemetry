@@ -135,7 +135,23 @@ class SpanBuilderTest extends TestCase
         $this->assertSame($spanBuilder, $result);
     }
 
-    public function test_start_creates_started_span()
+    public function test_start_creates_span()
+    {
+        $mockSpan = Mockery::mock(SpanInterface::class);
+
+        $mockBuilder = Mockery::mock(SpanBuilderInterface::class);
+        $mockBuilder->shouldReceive('startSpan')
+            ->once()
+            ->andReturn($mockSpan);
+
+        $spanBuilder = new SpanBuilder($mockBuilder);
+        $result = $spanBuilder->start();
+
+        $this->assertInstanceOf(SpanInterface::class, $result);
+        $this->assertSame($mockSpan, $result);
+    }
+
+    public function test_start_and_activate_creates_started_span()
     {
         $mockSpan = Mockery::mock(SpanInterface::class);
         $mockScope = Mockery::mock(ScopeInterface::class);
@@ -157,7 +173,7 @@ class SpanBuilderTest extends TestCase
             ->andReturn($mockSpan);
 
         $spanBuilder = new SpanBuilder($mockBuilder);
-        $result = $spanBuilder->start();
+        $result = $spanBuilder->startAndActivate();
 
         $this->assertInstanceOf(StartedSpan::class, $result);
     }

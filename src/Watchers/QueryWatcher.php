@@ -6,8 +6,10 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
@@ -28,6 +30,7 @@ class QueryWatcher extends Watcher
             ->spanBuilder(SpanNameHelper::database($this->getOperationName($event->sql), $this->extractTableName($event->sql)))
             ->setSpanKind(SpanKind::KIND_INTERNAL)
             ->setStartTimestamp($startTime)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $span->setAttributes([
@@ -38,18 +41,26 @@ class QueryWatcher extends Watcher
             'db.query.time_ms' => $event->time,
         ]);
 
+        Log::debug('OpenTelemetry: QueryWatcher: Span created', [
+            'span_id' => $span->getContext()->getSpanId(),
+            'trace_id' => $span->getContext()->getTraceId(),
+            'operation' => $this->getOperationName($event->sql),
+            'table' => $this->extractTableName($event->sql),
+        ]);
+
         $span->end($now);
     }
 
     protected function getOperationName(string $sql): string
     {
         $name = Str::upper(Str::before($sql, ' '));
+
         return in_array($name, ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE']) ? $name : 'QUERY';
     }
 
     protected function extractTableName(string $sql): ?string
     {
-        if (preg_match('/(?:from|into|update|join|table)\s+`?(\w+)`?/i', $sql, $matches)) {
+        if (preg_match('/(?:from|into|update|join|table)\s+[`"\']?(\w+)[`"\']?/i', $sql, $matches)) {
             return $matches[1];
         }
 
