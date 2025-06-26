@@ -111,8 +111,6 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         }
     }
 
-
-
     /**
      * Register middlewares
      */

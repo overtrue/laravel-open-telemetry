@@ -7,12 +7,9 @@ use Illuminate\Support\Facades\Route;
 use Mockery;
 use OpenTelemetry\API\Trace\NoopTracer;
 use OpenTelemetry\API\Trace\Span;
-use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanContextInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
-use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context as OtelContext;
-use OpenTelemetry\Context\ScopeInterface;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
@@ -62,7 +59,7 @@ class TraceRequestTest extends TestCase
 
         // When Laravel's handler reports the exception, our ExceptionWatcher is triggered.
         // We need to provide mocks for the calls it makes to avoid breaking the test.
-        Measure::shouldReceive('tracer')->andReturn(new NoopTracer());
+        Measure::shouldReceive('tracer')->andReturn(new NoopTracer);
         Measure::shouldReceive('activeSpan')->andReturn(Span::getInvalid());
 
         Route::get('/test-exception', fn () => throw $exception);

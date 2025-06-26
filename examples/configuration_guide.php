@@ -22,13 +22,13 @@ $traceIdEnabled = config('otel.middleware.trace_id.enabled', true);
 $traceIdGlobal = config('otel.middleware.trace_id.global', true);
 $traceIdHeaderName = config('otel.middleware.trace_id.header_name', 'X-Trace-Id');
 
-echo "Trace ID Middleware enabled: " . ($traceIdEnabled ? 'Yes' : 'No') . "\n";
-echo "Trace ID Middleware global: " . ($traceIdGlobal ? 'Yes' : 'No') . "\n";
+echo 'Trace ID Middleware enabled: '.($traceIdEnabled ? 'Yes' : 'No')."\n";
+echo 'Trace ID Middleware global: '.($traceIdGlobal ? 'Yes' : 'No')."\n";
 echo "Trace ID Header name: {$traceIdHeaderName}\n";
 
 // 4. Check new HTTP client configuration
 $httpClientPropagationEnabled = config('otel.http_client.propagation_middleware.enabled', true);
-echo "HTTP Client propagation middleware enabled: " . ($httpClientPropagationEnabled ? 'Yes' : 'No') . "\n";
+echo 'HTTP Client propagation middleware enabled: '.($httpClientPropagationEnabled ? 'Yes' : 'No')."\n";
 
 // 5. View all available watchers
 $watchers = config('otel.watchers', []);
@@ -47,8 +47,8 @@ echo "OTEL_TRACE_ID_HEADER_NAME=X-Custom-Trace-Id\n";
 echo "OTEL_HTTP_CLIENT_PROPAGATION_ENABLED=true\n";
 
 // 7. Demonstrate how to use in code
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Illuminate\Support\Facades\Http;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 // Fully automatic HTTP request tracing
 // No manual code needed - all requests through Http facade are automatically traced with context propagation
@@ -57,10 +57,10 @@ $response = Http::get('https://httpbin.org/ip');
 // View tracing status
 $status = Measure::getStatus();
 echo "\n=== Tracing Status ===\n";
-echo "Recording: " . ($status['is_recording'] ? 'Yes' : 'No') . "\n";
-echo "Current trace ID: " . ($status['current_trace_id'] ?? 'None') . "\n";
-echo "Active spans count: " . $status['active_spans_count'] . "\n";
-echo "Tracer provider: " . $status['tracer_provider']['class'] . "\n";
+echo 'Recording: '.($status['is_recording'] ? 'Yes' : 'No')."\n";
+echo 'Current trace ID: '.($status['current_trace_id'] ?? 'None')."\n";
+echo 'Active spans count: '.$status['active_spans_count']."\n";
+echo 'Tracer provider: '.$status['tracer_provider']['class']."\n";
 
 // 8. How to disable HTTP client propagation middleware
 echo "\n=== How to Disable HTTP Client Propagation ===\n";

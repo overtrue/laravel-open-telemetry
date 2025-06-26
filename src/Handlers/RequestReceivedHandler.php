@@ -6,8 +6,6 @@ namespace Overtrue\LaravelOpenTelemetry\Handlers;
 
 use Laravel\Octane\Events\RequestReceived;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\HttpAttributesHelper;
-use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
 class RequestReceivedHandler
 {

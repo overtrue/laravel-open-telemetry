@@ -6,10 +6,6 @@
  * This file demonstrates how HttpClientWatcher intelligently avoids duplicate tracing
  * through automatic context propagation using Laravel's globalRequestMiddleware
  */
-
-use Illuminate\Support\Facades\Http;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-
 echo "=== HTTP Client Tracing Solution ===\n\n";
 
 echo "Previous Issue:\n";

@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Handlers;
 
 use Laravel\Octane\Events\RequestHandled;
-use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\HttpAttributesHelper;
 
 class RequestHandledHandler
 {

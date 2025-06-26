@@ -2,7 +2,6 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
-use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;

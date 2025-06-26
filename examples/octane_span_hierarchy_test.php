@@ -8,10 +8,10 @@
  * 修复后: span 应该正确关联到父 span，形成完整的 trace 层次结构
  */
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 Route::get('/octane-hierarchy-test', function () {
@@ -50,9 +50,9 @@ Route::get('/octane-hierarchy-test', function () {
                             'database.query (posts)',
                             'cache.miss (another_key)',
                             'http.client.get (httpbin.org/uuid)',
-                        ]
-                    ]
-                ]
+                        ],
+                    ],
+                ],
             ];
         });
     });
@@ -86,6 +86,6 @@ Route::get('/octane-context-test', function () {
             'each_request_has_unique_trace_id' => true,
             'spans_are_properly_nested' => true,
             'no_orphaned_spans' => true,
-        ]
+        ],
     ];
 });

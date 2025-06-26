@@ -7,8 +7,8 @@
  * without needing to manually configure tracing middleware
  */
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
@@ -17,6 +17,7 @@ Route::get('/hello', function () {
     Http::get('https://httpbin.org/ip');           // Automatically traced
     event('hello.created', ['name' => 'test']);    // EventWatcher automatically traces
     Cache::get('foo', 'bar');                      // CacheWatcher automatically traces
+
     return 'Hello, World!';
 });
 
@@ -26,6 +27,7 @@ Route::get('/foo', function () {
         Http::get('https://httpbin.org/ip');       // Automatically traced
         event('hello.created2', ['name' => 'test']); // EventWatcher automatically traces
         Cache::get('foo', 'bar');                  // CacheWatcher automatically traces
+
         return 'Hello, Foo!';
     });
 });

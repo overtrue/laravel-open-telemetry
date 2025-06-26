@@ -6,7 +6,6 @@ namespace Overtrue\LaravelOpenTelemetry\Handlers;
 
 use Laravel\Octane\Events\RequestTerminated;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\HttpAttributesHelper;
 
 class RequestTerminatedHandler
 {

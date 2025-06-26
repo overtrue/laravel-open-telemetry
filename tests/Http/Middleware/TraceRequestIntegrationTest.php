@@ -4,7 +4,6 @@ namespace Overtrue\LaravelOpenTelemetry\Tests\Http\Middleware;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
-use Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
 
 class TraceRequestIntegrationTest extends TestCase
