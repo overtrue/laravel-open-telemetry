@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace Overtrue\LaravelOpenTelemetry;
 
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events;
 use OpenTelemetry\API\Globals;
-use OpenTelemetry\API\Trace\TracerInterface as Tracer;
-use OpenTelemetry\Context\Context;
+use OpenTelemetry\API\Trace\TracerInterface;
+use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId;
+use Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest;
 
 class OpenTelemetryServiceProvider extends ServiceProvider
 {
-    /**
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
-     */
     public function boot(): void
     {
         $this->publishes([
@@ -47,18 +47,18 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             __DIR__.'/../config/otel.php', 'otel',
         );
 
-        $this->app->singleton(\Overtrue\LaravelOpenTelemetry\Support\Measure::class, function ($app) {
-            return new \Overtrue\LaravelOpenTelemetry\Support\Measure($app);
+        $this->app->singleton(Support\Measure::class, function ($app) {
+            return new Support\Measure($app);
         });
 
-        $this->app->alias(\Overtrue\LaravelOpenTelemetry\Support\Measure::class, 'opentelemetry.measure');
+        $this->app->alias(Support\Measure::class, 'opentelemetry.measure');
 
-        $this->app->singleton(Tracer::class, function () {
+        $this->app->singleton(TracerInterface::class, function () {
             return Globals::tracerProvider()
                 ->getTracer(config('otel.tracer_name', 'overtrue.laravel-open-telemetry'));
         });
 
-        $this->app->alias(Tracer::class, 'opentelemetry.tracer');
+        $this->app->alias(TracerInterface::class, 'opentelemetry.tracer');
 
         Log::debug('OpenTelemetry: Service provider registered successfully');
     }
@@ -77,12 +77,6 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             Event::listen(Events\WorkerErrorOccurred::class, Handlers\WorkerErrorOccurredHandler::class);
             Event::listen(Events\TaskReceived::class, Handlers\TaskReceivedHandler::class);
             Event::listen(Events\TickReceived::class, Handlers\TickReceivedHandler::class);
-        } elseif (! $this->app->runningInConsole() && ! $this->app->environment('testing')) {
-            // FPM mode: Only start in non-console and non-testing environments
-            // Initialize context at the beginning of the request
-            if (! Context::getCurrent()) {
-                Context::attach(Context::getRoot());
-            }
         }
     }
 
@@ -106,7 +100,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand::class,
+                TestCommand::class,
             ]);
         }
     }
@@ -117,21 +111,21 @@ class OpenTelemetryServiceProvider extends ServiceProvider
     protected function registerMiddlewares(): void
     {
         $router = $this->app->make('router');
-        $kernel = $this->app->make(\Illuminate\Contracts\Http\Kernel::class);
+        $kernel = $this->app->make(Kernel::class);
 
         // Register OpenTelemetry root span middleware
-        $router->aliasMiddleware('otel', \Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest::class);
+        $router->aliasMiddleware('otel', TraceRequest::class);
 
-        $kernel->prependMiddleware(\Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest::class);
+        $kernel->prependMiddleware(TraceRequest::class);
 
         // Register Trace ID middleware
         if (config('otel.middleware.trace_id.enabled', true)) {
             // Register middleware alias
-            $router->aliasMiddleware('otel.trace_id', \Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId::class);
+            $router->aliasMiddleware('otel.trace_id', AddTraceId::class);
 
             // Enable TraceId middleware globally by default
             if (config('otel.middleware.trace_id.global', true)) {
-                $kernel->pushMiddleware(\Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId::class);
+                $kernel->pushMiddleware(AddTraceId::class);
                 Log::debug('OpenTelemetry: Middleware registered globally for automatic tracing');
             }
         }
