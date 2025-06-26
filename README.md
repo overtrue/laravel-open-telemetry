@@ -1,321 +1,348 @@
 # Laravel OpenTelemetry
 
-[![CI](https://github.com/overtrue/laravel-open-telemetry/actions/workflows/ci.yml/badge.svg)](https://github.com/overtrue/laravel-open-telemetry/actions/workflows/ci.yml)
-[![Latest Stable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/stable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
-[![Latest Unstable Version](https://poser.pugx.org/overtrue/laravel-open-telemetry/v/unstable.svg)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
-[![Total Downloads](https://poser.pugx.org/overtrue/laravel-open-telemetry/downloads)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
-[![License](https://poser.pugx.org/overtrue/laravel-open-telemetry/license)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/overtrue/laravel-open-telemetry.svg?style=flat-square)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
+[![Total Downloads](https://img.shields.io/packagist/dt/overtrue/laravel-open-telemetry.svg?style=flat-square)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 
-🚀 **现代化的 Laravel OpenTelemetry 集成包**
+This package provides a simple way to add OpenTelemetry to your Laravel application.
 
-此包在官方 [`opentelemetry-auto-laravel`](https://packagist.org/packages/open-telemetry/opentelemetry-auto-laravel) 包的基础上，提供额外的 Laravel 特定增强功能。
+## ⚠️ Breaking Changes in Recent Versions
 
-## ✨ 特性
+**SpanBuilder API Changes**: The `SpanBuilder::start()` method behavior has been updated for better safety and predictability:
 
-### 🔧 基于官方包
-- ✅ 自动安装并依赖官方 `open-telemetry/opentelemetry-auto-laravel` 包
-- ✅ 继承官方包的所有基础自动化仪表功能
-- ✅ 使用官方标准的注册方式和 hook 机制
+- **Before**: `start()` automatically activated the span's scope, which could cause issues in async scenarios
+- **Now**: `start()` only creates the span without activating its scope (safer default behavior)
+- **Migration**: If you need the old behavior, use `startAndActivate()` instead of `start()`
 
-### 🎯 增强功能
-- ✅ **异常监听**: 详细的异常信息记录
-- ✅ **认证追踪**: 用户认证状态和身份信息
-- ✅ **事件分发**: 事件名称、监听器数量统计
-- ✅ **队列操作**: 任务处理、入队和状态追踪
-- ✅ **Redis 命令**: 命令执行、参数和结果记录
-- ✅ **Guzzle HTTP**: 自动追踪 HTTP 客户端请求
+```php
+// Old code (if you need scope activation)
+$span = Measure::span('my-operation')->start(); // This now returns SpanInterface
 
-### ⚙️ 灵活配置
-- ✅ 可独立控制每项增强功能的启用/禁用
-- ✅ 敏感信息过滤和头部白名单
-- ✅ 路径忽略和性能优化选项
-- ✅ 自动响应头 trace ID 注入
+// New code (for scope activation)
+$startedSpan = Measure::span('my-operation')->startAndActivate(); // Returns StartedSpan
+```
 
-## 📦 安装
+For most use cases, the new `start()` behavior is safer and recommended. See the [Advanced Span Creation](#advanced-span-creation-with-spanbuilder) section for detailed usage patterns.
+
+## Features
+
+- ✅ **Zero Configuration**: Works out of the box with sensible defaults.
+- ✅ **Laravel Native**: Deep integration with Laravel's lifecycle and events.
+- ✅ **Octane & FPM Support**: Full compatibility with Laravel Octane and traditional FPM setups.
+- ✅ **Powerful `Measure` Facade**: Provides an elegant API for manual, semantic tracing.
+- ✅ **Automatic Tracing**: Built-in watchers for cache, database, HTTP clients, queues, and more.
+- ✅ **Flexible Configuration**: Control traced paths, headers, and watchers to fit your needs.
+- ✅ **Standards Compliant**: Adheres to OpenTelemetry Semantic Conventions.
+
+## Installation
+
+You can install the package via composer:
 
 ```bash
 composer require overtrue/laravel-open-telemetry
 ```
 
-### 依赖要求
+## Configuration
 
-- **PHP**: 8.4+
-- **Laravel**: 10.0+ | 11.0+ | 12.0+
-- **OpenTelemetry 扩展**: 必需 (`ext-opentelemetry`)
-- **官方包**: 自动安装 `open-telemetry/opentelemetry-auto-laravel`
+> **Important Note for Octane Users**
+>
+> When using Laravel Octane, it is **highly recommended** to set `OTEL_*` environment variables at the machine or process level (e.g., in your Dockerfile, `docker-compose.yml`, or Supervisor configuration) rather than relying solely on the `.env` file.
+>
+> This is because some OpenTelemetry components, especially those enabled by `OTEL_PHP_AUTOLOAD_ENABLED`, are initialized before the Laravel application fully boots and reads the `.env` file. Setting them as system-level environment variables ensures they are available to the PHP process from the very beginning.
 
-## 🔧 配置
+This package uses the standard OpenTelemetry environment variables for configuration. Add these to your `.env` file for basic setup:
 
-### 发布配置文件
+### Basic Configuration
 
-```bash
-php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider" --tag="config"
+```env
+# Enable OpenTelemetry PHP SDK auto-loading
+OTEL_PHP_AUTOLOAD_ENABLED=true
+
+# Service identification
+OTEL_SERVICE_NAME=my-laravel-app
+OTEL_SERVICE_VERSION=1.0.0
+
+# Exporter configuration (console for dev, otlp for prod)
+OTEL_TRACES_EXPORTER=console
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+
+# Context propagation
+OTEL_PROPAGATORS=tracecontext,baggage
 ```
 
-### 环境变量配置
+### Package Configuration
 
-#### 🟢 OpenTelemetry SDK 配置（服务器环境变量）
-
-**重要**：这些变量必须设置为服务器环境变量，不能放在 Laravel 的 `.env` 文件中：
+For package-specific settings, publish the configuration file:
 
 ```bash
-# 核心配置
-export OTEL_PHP_AUTOLOAD_ENABLED=true
-export OTEL_SERVICE_NAME=my-laravel-app
-export OTEL_TRACES_EXPORTER=console  # 或 otlp
-
-# 生产环境配置
-export OTEL_TRACES_EXPORTER=otlp
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+php artisan vendor:publish --provider="Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider" --tag=config
 ```
 
-#### 🟡 Laravel 包配置（可放在 .env 文件）
+This will create a `config/otel.php` file. Here are the key options:
 
-```bash
-# HTTP 头处理
-OTEL_ALLOWED_HEADERS=referer,x-*,accept,request-id
-OTEL_SENSITIVE_HEADERS=authorization,cookie,x-api-key
+#### Enabling/Disabling Tracing
 
-# 响应头
-OTEL_RESPONSE_TRACE_HEADER_NAME=X-Trace-Id
-```
-
-### 配置示例
-
-#### 开发环境
-```bash
-# 服务器环境变量
-export OTEL_PHP_AUTOLOAD_ENABLED=true
-export OTEL_SERVICE_NAME=my-dev-app
-export OTEL_TRACES_EXPORTER=console
-
-# .env 文件
-OTEL_RESPONSE_TRACE_HEADER_NAME=X-Trace-Id
-```
-
-#### 生产环境
-```bash
-# 服务器环境变量
-export OTEL_PHP_AUTOLOAD_ENABLED=true
-export OTEL_SERVICE_NAME=my-production-app
-export OTEL_TRACES_EXPORTER=otlp
-export OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.com:4318
-
-# .env 文件
-OTEL_RESPONSE_TRACE_HEADER_NAME=X-Trace-Id
-OTEL_SERVICE_VERSION=2.1.0
-```
-
-## 🚀 使用方法
-
-### 响应头 Trace ID
-
-安装后，每个 HTTP 响应都会自动包含 trace ID 头部（默认为 `X-Trace-Id`）：
-
-```bash
-# 请求示例
-curl -v https://your-app.com/api/users
-
-# 响应头将包含
-X-Trace-Id: 1234567890abcdef1234567890abcdef
-```
-
-**配置选项：**
-- 设置自定义头部名称：`OTEL_RESPONSE_TRACE_HEADER_NAME=Custom-Trace-Header`
-- 禁用此功能：`OTEL_RESPONSE_TRACE_HEADER_NAME=null`
-
-### 自动追踪
-
-安装并配置后，包会自动为您的 Laravel 应用提供详细的追踪信息：
+You can completely enable or disable tracing for the entire application. This is useful for performance tuning or disabling tracing in certain environments.
 
 ```php
-// 官方包提供的基础功能
-// ✅ HTTP 请求自动追踪
-// ✅ 数据库查询追踪
-// ✅ 缓存操作追踪
-// ✅ 外部 HTTP 请求追踪
+// config/otel.php
+'enabled' => env('OTEL_ENABLED', true),
+```
+Set `OTEL_ENABLED=false` in your `.env` file to disable all tracing.
 
-// 此包提供的增强功能
-// ✅ 异常详细记录
-// ✅ 用户认证状态追踪
-// ✅ 事件分发统计
-// ✅ 队列任务处理追踪
-// ✅ Redis 命令执行记录
-// ✅ Guzzle HTTP 客户端追踪
-// ✅ 自动响应头 trace ID 注入
+#### Filtering Requests and Headers
+
+You can control which requests are traced and which headers are recorded to enhance performance and protect sensitive data. All patterns support wildcards (`*`) and are case-insensitive.
+
+- **`ignore_paths`**: A list of request paths to exclude from tracing. Useful for health checks, metrics endpoints, etc.
+  ```php
+  'ignore_paths' => ['health*', 'telescope*', 'horizon*'],
+  ```
+- **`allowed_headers`**: A list of HTTP header patterns to include in spans. If empty, no headers are recorded.
+  ```php
+  'allowed_headers' => ['x-request-id', 'user-agent', 'authorization'],
+  ```
+- **`sensitive_headers`**: A list of header patterns whose values will be masked (replaced with `***`).
+  ```php
+  'sensitive_headers' => ['authorization', 'cookie', 'x-api-key', '*-token'],
+  ```
+
+#### Watchers
+
+You can enable or disable specific watchers to trace different parts of your application.
+
+```php
+// config/otel.php
+'watchers' => [
+    \Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class => env('OTEL_CACHE_WATCHER_ENABLED', true),
+    \Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class => env('OTEL_QUERY_WATCHER_ENABLED', true),
+    // ...
+],
 ```
 
-### 手动追踪
+## Usage
 
-使用 Facade 进行手动追踪：
+The package is designed to work with minimal manual intervention, but it also provides a powerful `Measure` facade for creating custom spans.
+
+### Automatic Tracing
+
+With the default configuration, the package automatically traces:
+- Incoming HTTP requests.
+- Database queries (`QueryWatcher`).
+- Cache operations (`CacheWatcher`).
+- Outgoing HTTP client requests (`HttpClientWatcher`).
+- Thrown exceptions (`ExceptionWatcher`).
+- Queue jobs (`QueueWatcher`).
+- ...and more, depending on the enabled [watchers](#watchers).
+
+### Creating Custom Spans with `Measure::trace()`
+
+For tracing specific blocks of code, the `Measure::trace()` method is the recommended approach. It automatically handles span creation, activation, exception recording, and completion.
 
 ```php
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
-// 简单 span
-$startedSpan = Measure::span('custom-operation')->start();
-// 您的代码
-$startedSpan->end();
+Measure::trace('process-user-data', function ($span) use ($user) {
+    // Add attributes to the span
+    $span->setAttribute('user.id', $user->id);
 
-// 使用闭包（推荐方式）
-$result = Measure::span('custom-operation')->measure(function() {
-    // 您的代码
-    return 'result';
+    // Your business logic here
+    $this->process($user);
+
+    // Add an event to mark a point in time within the span
+    $span->addEvent('User processing finished');
 });
-
-// 手动控制
-$spanBuilder = Measure::span('custom-operation');
-$spanBuilder->setAttribute('user.id', $userId);
-$spanBuilder->setAttribute('operation.type', 'critical');
-$startedSpan = $spanBuilder->start();
-// 您的代码
-$startedSpan->end();
-
-// 获取当前 span
-$currentSpan = Measure::getCurrentSpan();
-
-// 获取追踪 ID
-$traceId = Measure::getTraceId();
 ```
 
-### Guzzle HTTP 客户端追踪
+The `trace` method will:
+- Start a new span.
+- Execute the callback.
+- Automatically record and re-throw any exceptions that occur within the callback.
+- End the span when the callback completes.
 
-自动为 Guzzle HTTP 请求添加追踪：
+### Advanced Span Creation with SpanBuilder
+
+For more control over span lifecycle, you can use the `SpanBuilder` directly through `Measure::span()`. The SpanBuilder provides several methods for different use cases:
+
+#### Basic Span Creation (Recommended for most cases)
 
 ```php
-use Illuminate\Support\Facades\Http;
+// Create a span without activating its scope (safer for async operations)
+$span = Measure::span('my-operation')
+    ->setAttribute('operation.type', 'data-processing')
+    ->setSpanKind(SpanKind::KIND_INTERNAL)
+    ->start(); // Returns SpanInterface
 
-// 使用 withTrace() 宏启用追踪
-$response = Http::withTrace()->get('https://api.example.com/users');
+// Your business logic here
+$result = $this->processData();
 
-// 或者直接使用，如果全局启用了追踪
-$response = Http::get('https://api.example.com/users');
+// Remember to end the span manually
+$span->end();
 ```
 
-### 测试命令
+#### Span with Activated Scope
 
-运行内置的测试命令来验证追踪是否正常工作：
+```php
+// Create a span and activate its scope (for nested operations)
+$startedSpan = Measure::span('parent-operation')
+    ->setAttribute('operation.type', 'user-workflow')
+    ->setSpanKind(SpanKind::KIND_INTERNAL)
+    ->startAndActivate(); // Returns StartedSpan
 
-```bash
-php artisan otel:test
+// Any spans created within this block will be children of this span
+$childSpan = Measure::span('child-operation')->start();
+$childSpan->end();
+
+// The StartedSpan automatically manages scope cleanup
+$startedSpan->end(); // Ends span and detaches scope
 ```
 
-此命令将创建一些测试 span 并显示当前的配置状态。
+#### Span with Context (For Manual Propagation)
 
-## 🏗️ 架构说明
+```php
+// Create a span and get both span and context for manual management
+[$span, $context] = Measure::span('async-operation')
+    ->setAttribute('operation.async', true)
+    ->startWithContext(); // Returns [SpanInterface, ContextInterface]
 
-### 分层架构
+// Use context for propagation (e.g., in HTTP headers)
+$headers = Measure::propagationHeaders($context);
 
-```
-┌─────────────────────────────────────┐
-│     您的 Laravel 应用               │
-├─────────────────────────────────────┤
-│  overtrue/laravel-open-telemetry    │  ← 增强层
-│  Hooks:                             │
-│  - HTTP Kernel Hook (响应头)        │
-│  Watchers:                          │
-│  - ExceptionWatcher                 │
-│  - AuthenticateWatcher              │
-│  - EventWatcher                     │
-│  - QueueWatcher                     │
-│  - RedisWatcher                     │
-├─────────────────────────────────────┤
-│  open-telemetry/opentelemetry-      │  ← 官方自动化层
-│  auto-laravel                       │
-│  - HTTP 请求、数据库、缓存追踪       │
-├─────────────────────────────────────┤
-│  OpenTelemetry PHP SDK              │  ← 核心 SDK
-└─────────────────────────────────────┘
+// Your async operation here
+$span->end();
 ```
 
-### 注册机制
+### Using Semantic Spans
 
-- **双重机制**: 同时支持 Hook 和 Watcher 两种注册方式
-- **Hook 层**: 基于 OpenTelemetry 官方 Hook 机制，用于核心基础设施功能（如响应头注入）
-- **Watcher 层**: 基于 Laravel 事件系统，用于应用层业务逻辑追踪
-- **高性能**: Hook 直接拦截框架调用，Watcher 基于原生事件机制，性能开销极小
-- **标准化**: 遵循 OpenTelemetry 官方标准和最佳实践
-- **模块化**: 每个组件独立注册，可单独启用/禁用
+To promote standardization, the package provides semantic helper methods that create spans with attributes conforming to OpenTelemetry's [Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/).
 
-## 🔍 追踪信息示例
-
-### HTTP 请求追踪
+#### Database Spans
+```php
+// Manually trace a block of database operations
+$user = Measure::database('SELECT', 'users'); // Quick shortcut for database operations
+// Or use the general trace method for more complex operations
+$user = Measure::trace('repository:find-user', function ($span) use ($userId) {
+    $span->setAttribute('db.statement', "SELECT * FROM users WHERE id = ?");
+    $span->setAttribute('db.table', 'users');
+    return User::find($userId);
+});
 ```
-Span: http.request
-├── http.method: "GET"
-├── http.url: "https://example.com/users/123"
-├── http.status_code: 200
-├── http.request.header.content-type: "application/json"
-└── http.response.header.content-length: "1024"
-```
+*Note: If `QueryWatcher` is enabled, individual queries are already traced. This is useful for tracing a larger transaction or a specific business operation involving multiple queries.*
 
-### 队列任务追踪
-```
-Span: queue.process
-├── queue.connection: "redis"
-├── queue.name: "emails"
-├── queue.job.class: "App\Jobs\SendEmailJob"
-├── queue.job.id: "job_12345"
-├── queue.job.attempts: 1
-└── queue.job.status: "completed"
+#### HTTP Client Spans
+```php
+// Quick shortcut for HTTP client requests
+$response = Measure::httpClient('POST', 'https://api.example.com/users');
+// Or use the general trace method for more control
+$response = Measure::trace('api-call', function ($span) {
+    $span->setAttribute('http.method', 'POST');
+    $span->setAttribute('http.url', 'https://api.example.com/users');
+    return Http::post('https://api.example.com/users', $data);
+});
 ```
 
-### Redis 命令追踪
-```
-Span: redis.get
-├── db.system: "redis"
-├── db.operation: "get"
-├── redis.command: "GET user:123:profile"
-├── redis.result.type: "string"
-└── redis.result.length: 256
+#### Custom Spans
+```php
+// For any custom operation, use the general trace method
+$result = Measure::trace('process-payment', function ($span) use ($payment) {
+    $span->setAttribute('payment.amount', $payment->amount);
+    $span->setAttribute('payment.currency', $payment->currency);
+
+    // Your business logic here
+    return $this->processPayment($payment);
+});
 ```
 
-### 异常追踪
-```
-Span: exception.handle
-├── exception.type: "App\Exceptions\UserNotFoundException"
-├── exception.message: "User with ID 123 not found"
-├── exception.stack_trace: "..."
-└── exception.level: "error"
+### Retrieving the Current Span
+
+You can access the currently active span anywhere in your code.
+
+```php
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+
+$currentSpan = Measure::activeSpan();
+$currentSpan->setAttribute('custom.attribute', 'some_value');
 ```
 
-## 🧪 测试
+### Watchers
+
+The package includes several watchers that automatically create spans for common Laravel operations. You can enable or disable them in `config/otel.php`.
+
+- **`CacheWatcher`**: Traces cache hits, misses, writes, and forgets.
+- **`QueryWatcher`**: Traces the execution of every database query.
+- **`HttpClientWatcher`**: Traces all outgoing HTTP requests made with Laravel's `Http` facade.
+- **`ExceptionWatcher`**: Traces all exceptions thrown in your application.
+- **`QueueWatcher`**: Traces jobs being dispatched, processed, and failing.
+- **`RedisWatcher`**: Traces Redis commands.
+- **`AuthenticateWatcher`**: Traces authentication events like login, logout, and failed attempts.
+
+
+### Trace ID Injection Middleware
+
+The package includes middleware to add a `X-Trace-Id` header to your HTTP responses, which is useful for debugging.
+
+You can apply it to specific routes:
+```php
+// In your routes/web.php or routes/api.php
+Route::middleware('otel.traceid')->group(function () {
+    Route::get('/api/users', [UserController::class, 'index']);
+});
+```
+
+Or apply it globally in `app/Http/Kernel.php`:
+```php
+// app/Http/Kernel.php
+
+// In the $middlewareGroups property for 'web' or 'api'
+protected $middlewareGroups = [
+    'web' => [
+        // ...
+        \Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId::class,
+    ],
+    // ...
+];
+```
+
+## Environment Variables Reference
+
+### Core OpenTelemetry Variables
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `OTEL_PHP_AUTOLOAD_ENABLED` | Enable PHP SDK auto-loading | `false` | `true` |
+| `OTEL_SERVICE_NAME` | Service name | `unknown_service` | `my-laravel-app` |
+| `OTEL_SERVICE_VERSION` | Service version | `null` | `1.0.0` |
+| `OTEL_TRACES_EXPORTER` | Trace exporter type | `otlp` | `console`, `otlp` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL | `http://localhost:4318` | `https://api.honeycomb.io` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | OTLP protocol | `http/protobuf` | `http/protobuf`, `grpc` |
+| `OTEL_PROPAGATORS` | Context propagators | `tracecontext,baggage` | `tracecontext,baggage,b3` |
+| `OTEL_TRACES_SAMPLER` | Sampling strategy | `parentbased_always_on` | `always_on`, `traceidratio` |
+| `OTEL_TRACES_SAMPLER_ARG` | Sampler argument | `null` | `0.1` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Resource attributes | `null` | `key1=value1,key2=value2` |
+
+## Testing
 
 ```bash
 composer test
 ```
 
-## 🎨 代码风格
+## Changelog
 
-```bash
-composer fix-style
-```
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
-## 🤝 贡献
+## Contributing
 
-欢迎提交 Pull Request！请确保：
+Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-1. 遵循现有代码风格
-2. 添加适当的测试
-3. 更新相关文档
-4. 确保所有测试通过
+## Security Vulnerabilities
 
-## 📝 变更日志
+Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
 
-请查看 [CHANGELOG](CHANGELOG.md) 了解详细的版本变更信息。
+## Credits
 
-## 📄 许可证
+- [overtrue](https://github.com/overtrue)
+- [All Contributors](../../contributors)
 
-MIT 许可证。详情请查看 [License File](LICENSE) 文件。
+## License
 
-## 🙏 致谢
-
-- [OpenTelemetry PHP](https://github.com/open-telemetry/opentelemetry-php) - 核心 OpenTelemetry PHP 实现
-- [OpenTelemetry Auto Laravel](https://github.com/opentelemetry-php/contrib-auto-laravel) - 官方 Laravel 自动化仪表包
-- [Laravel](https://laravel.com/) - 优雅的 PHP Web 框架
-
----
-
-<p align="center">
-  <strong>让您的 Laravel 应用具备世界级的可观测性 🚀</strong>
-</p>
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
-use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 
 /**
  * Event Watcher
@@ -16,77 +14,69 @@ use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
  */
 class EventWatcher extends Watcher
 {
-    public function __construct(
-        private readonly CachedInstrumentation $instrumentation,
-    ) {}
+    /**
+     * @var string[]
+     */
+    protected array $eventsToSkip = [
+        'Illuminate\Log\Events\MessageLogged',
+        'Illuminate\Database\Events\QueryExecuted',
+        'Illuminate\Cache\Events\CacheHit',
+        'Illuminate\Cache\Events\CacheMissed',
+        'Illuminate\Cache\Events\KeyWritten',
+        'Illuminate\Cache\Events\KeyForgotten',
+        'Illuminate\Queue\Events\JobProcessing',
+        'Illuminate\Queue\Events\JobProcessed',
+        'Illuminate\Queue\Events\JobFailed',
+        'Illuminate\Auth\Events\Attempting',
+        'Illuminate\Auth\Events\Authenticated',
+        'Illuminate\Auth\Events\Login',
+        'Illuminate\Auth\Events\Failed',
+        'Illuminate\Auth\Events\Logout',
+        'Illuminate\Redis\Events\CommandExecuted',
+        'Illuminate\Http\Client\Events\RequestSending',
+        'Illuminate\Http\Client\Events\ResponseReceived',
+        'Illuminate\Http\Client\Events\ConnectionFailed',
+    ];
+
+    public array $events = [
+        // ...
+    ];
 
     public function register(Application $app): void
     {
-        // Use wildcard to listen to all events
         $app['events']->listen('*', [$this, 'recordEvent']);
     }
 
-    public function recordEvent(string $eventName, array $payload): void
+    public function recordEvent($event): void
     {
-        // Skip OpenTelemetry-related events to avoid infinite loops
-        if (str_starts_with($eventName, 'opentelemetry') || str_starts_with($eventName, 'otel')) {
+        if ($this->shouldSkip($event)) {
             return;
         }
-
-        // Skip some frequent internal events
-        $skipEvents = [
-            'Illuminate\Log\Events\MessageLogged',
-            'Illuminate\Database\Events\QueryExecuted',
-            'Illuminate\Cache\Events\CacheHit',
-            'Illuminate\Cache\Events\CacheMissed',
-            'Illuminate\Cache\Events\KeyWritten',
-            'Illuminate\Cache\Events\KeyForgotten',
-        ];
-
-        if (in_array($eventName, $skipEvents)) {
-            return;
-        }
-
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder(sprintf('event %s', $eventName))
-            ->setSpanKind(SpanKind::KIND_INTERNAL)
-            ->startSpan();
 
         $attributes = [
-            'event.name' => $eventName,
-            'event.payload_count' => count($payload),
+            'event.payload_count' => is_array($event) ? count($event) : 0,
         ];
 
-        // If payload contains objects, record object type
-        if (! empty($payload)) {
-            $firstPayload = $payload[0] ?? null;
-            if (is_object($firstPayload)) {
-                $attributes['event.object_type'] = get_class($firstPayload);
+        $firstPayload = is_array($event) ? ($event[0] ?? null) : null;
+        if (is_object($firstPayload)) {
+            $attributes['event.object_type'] = get_class($firstPayload);
+        }
 
-                // If it's a model event, record model information
-                if (method_exists($firstPayload, 'getTable')) {
-                    $attributes['event.model_table'] = $firstPayload->getTable();
-                }
+        Measure::addEvent($event, $attributes);
+    }
 
-                if (method_exists($firstPayload, 'getKey')) {
-                    $attributes['event.model_key'] = $firstPayload->getKey();
-                }
+    protected function shouldSkip(string $eventName): bool
+    {
+        if (str_starts_with($eventName, 'otel.') || str_starts_with($eventName, 'opentelemetry.')) {
+            return true;
+        }
+
+        foreach ($this->eventsToSkip as $eventToSkip) {
+            if (fnmatch($eventToSkip, $eventName)) {
+                return true;
             }
         }
 
-        // Try to get listener count
-        try {
-            $dispatcher = app('events');
-            if (method_exists($dispatcher, 'getListeners')) {
-                $listeners = $dispatcher->getListeners($eventName);
-                $attributes['event.listeners_count'] = count($listeners);
-            }
-        } catch (\Exception $e) {
-            // Ignore listener retrieval failures
-        }
-
-        $span->setAttributes($attributes);
-        $span->end();
+        return false;
     }
 }

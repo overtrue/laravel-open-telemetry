@@ -3,32 +3,67 @@
 return [
 
     /**
-     * The name of the header that will be used to pass the trace id in the response.
-     * if set to `null`, the header will not be added to the response.
+     * Enable or disable OpenTelemetry tracing
+     * When disabled, no watchers will be registered and no tracing will occur
      */
-    'response_trace_header_name' => env('OTEL_RESPONSE_TRACE_HEADER_NAME', 'X-Trace-Id'),
+    'enabled' => env('OTEL_ENABLED', true),
+
+    /**
+     * The name of the tracer that will be used to create spans.
+     * This is useful for identifying the source of the spans.
+     */
+    'tracer_name' => env('OTEL_TRACER_NAME', 'overtrue.laravel-open-telemetry'),
+
+    /**
+     * Middleware Configuration
+     */
+    'middleware' => [
+        /**
+         * Trace ID Middleware Configuration
+         * Used to add X-Trace-Id to response headers
+         */
+        'trace_id' => [
+            'enabled' => env('OTEL_TRACE_ID_MIDDLEWARE_ENABLED', true),
+            'global' => env('OTEL_TRACE_ID_MIDDLEWARE_GLOBAL', true),
+            'header_name' => env('OTEL_TRACE_ID_HEADER_NAME', 'X-Trace-Id'),
+        ],
+    ],
+
+    /**
+     * HTTP Client Configuration
+     */
+    'http_client' => [
+        /**
+         * Global Request Middleware Configuration
+         * Automatically adds OpenTelemetry propagation headers to all HTTP requests
+         */
+        'propagation_middleware' => [
+            'enabled' => env('OTEL_HTTP_CLIENT_PROPAGATION_ENABLED', true),
+        ],
+    ],
 
     /**
      * Watchers Configuration
-     * Note: Starting from v2.0, we use OpenTelemetry's official auto-instrumentation
-     * Most tracing functionality is provided by the opentelemetry-auto-laravel package
-     * This package provides the following additional Watcher functionality:
      *
      * Available Watcher classes:
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class
+     * - \Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class
      * - \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class
-     * - \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class
      */
     'watchers' => [
+        \Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class,
+        \Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, // 已添加智能重复检测，可以同时使用
         \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class,
         \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class,
-        \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class,
     ],
 
     /**
@@ -54,9 +89,23 @@ return [
      * Ignore paths will not be traced. You can use `*` as wildcard.
      */
     'ignore_paths' => explode(',', env('OTEL_IGNORE_PATHS', implode(',', [
-        'horizon*',
-        'telescope*',
-        '_debugbar*',
-        'health*',
+        'up',
+        'horizon*',         // Laravel Horizon dashboard
+        'telescope*',       // Laravel Telescope dashboard
+        '_debugbar*',       // Laravel Debugbar
+        'health*',          // Health check endpoints
+        'ping',             // Simple ping endpoint
+        'status',           // Status endpoint
+        'metrics',          // Metrics endpoint
+        'favicon.ico',      // Browser favicon requests
+        'robots.txt',       // SEO robots file
+        'sitemap.xml',      // SEO sitemap
+        'api/health',       // API health check
+        'api/ping',         // API ping
+        'admin/health',     // Admin health check
+        'internal/*',       // Internal endpoints
+        'monitoring/*',     // Monitoring endpoints
+        '_profiler/*',      // Symfony profiler (if used)
+        '.well-known/*',    // Well-known URIs (RFC 8615)
     ]))),
 ];

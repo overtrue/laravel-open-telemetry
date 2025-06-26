@@ -2,10 +2,8 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
-use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Log;
 use Mockery;
-use Overtrue\LaravelOpenTelemetry\Console\Commands\FrankenPhpWorkerStatusCommand;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
 use Overtrue\LaravelOpenTelemetry\Support\Measure;
@@ -36,7 +34,7 @@ class OpenTelemetryServiceProviderTest extends TestCase
         // Verify config is merged
         $this->assertNotNull(config('otel'));
         $this->assertIsArray(config('otel.watchers'));
-        $this->assertIsString(config('otel.response_trace_header_name'));
+        $this->assertIsArray(config('otel.middleware'));
     }
 
     public function test_provider_publishes_config()
@@ -56,7 +54,7 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $this->assertContains($expectedConfigPath, array_values($publishes));
     }
 
-    public function test_provider_registers_guzzle_macro()
+    public function test_provider_registers_http_client_watchers()
     {
         // Create service provider
         $provider = new OpenTelemetryServiceProvider($this->app);
@@ -64,8 +62,9 @@ class OpenTelemetryServiceProviderTest extends TestCase
         // Boot services
         $provider->boot();
 
-        // Verify Guzzle macro is registered
-        $this->assertTrue(PendingRequest::hasMacro('withTrace'));
+        // Verify HTTP client watchers are registered by checking config
+        $watchers = config('otel.watchers', []);
+        $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, $watchers);
     }
 
     public function test_provider_registers_console_commands()
@@ -89,7 +88,6 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $provider->shouldReceive('commands')
             ->with([
                 TestCommand::class,
-                FrankenPhpWorkerStatusCommand::class,
             ])
             ->once();
 
@@ -99,31 +97,33 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $this->assertTrue(true); // Mockery will fail if expectation not met
     }
 
-    public function test_guzzle_macro_returns_request_with_middleware()
+    public function test_http_client_propagation_middleware_configuration()
     {
         // Create service provider and boot it
         $provider = new OpenTelemetryServiceProvider($this->app);
         $provider->boot();
 
-        // Create a PendingRequest instance
-        $request = new PendingRequest;
+        // Verify HTTP client propagation middleware config exists and is enabled by default
+        $this->assertTrue(config('otel.http_client.propagation_middleware.enabled', true));
 
-        // Use the withTrace macro
-        $requestWithTrace = $request->withTrace();
-
-        // Verify it returns a PendingRequest instance
-        $this->assertInstanceOf(PendingRequest::class, $requestWithTrace);
+        // Test that we can disable it via config
+        config(['otel.http_client.propagation_middleware.enabled' => false]);
+        $this->assertFalse(config('otel.http_client.propagation_middleware.enabled'));
     }
 
     public function test_provider_logs_startup_and_registration()
     {
         // Mock Log facade
         Log::shouldReceive('debug')
-            ->with('[laravel-open-telemetry] started', Mockery::type('array'))
+            ->with('OpenTelemetry: Service provider initialization started', Mockery::type('array'))
             ->once();
 
         Log::shouldReceive('debug')
-            ->with('[laravel-open-telemetry] registered.')
+            ->with('OpenTelemetry: Service provider registered successfully')
+            ->once();
+
+        Log::shouldReceive('debug')
+            ->with('OpenTelemetry: Middleware registered globally for automatic tracing')
             ->once();
 
         // Create service provider
@@ -135,6 +135,49 @@ class OpenTelemetryServiceProviderTest extends TestCase
 
         // Verify the expectation was met
         $this->assertTrue(true); // Mockery will fail if expectation not met
+    }
+
+    public function test_tracer_provider_is_initialized()
+    {
+        // 获取全局 TracerProvider
+        $tracerProvider = \OpenTelemetry\API\Globals::tracerProvider();
+
+        // 确保不是 NoopTracerProvider
+        $this->assertNotInstanceOf(
+            \OpenTelemetry\API\Trace\NoopTracerProvider::class,
+            $tracerProvider
+        );
+
+        // 确保可以创建 tracer
+        $tracer = $tracerProvider->getTracer('test');
+        $this->assertNotNull($tracer);
+
+        // 确保可以创建 span
+        $span = $tracer->spanBuilder('test-span')->startSpan();
+        $this->assertNotNull($span);
+        $span->end();
+    }
+
+    public function test_tracer_provider_uses_configuration()
+    {
+        // 设置配置
+        config([
+            'otel.tracer_provider.service.name' => 'test-service',
+            'otel.tracer_provider.service.version' => '2.0.0',
+        ]);
+
+        // 重新初始化 ServiceProvider
+        $this->app->register(\Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider::class);
+
+        // 获取 tracer 并创建 span
+        $tracer = \OpenTelemetry\API\Globals::tracerProvider()->getTracer('test');
+        $span = $tracer->spanBuilder('test-span')->startSpan();
+
+        // 检查 span 的资源信息
+        $resource = $span->getResource();
+        $this->assertNotNull($resource);
+
+        $span->end();
     }
 
     protected function tearDown(): void

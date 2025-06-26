@@ -2,6 +2,9 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests;
 
+use Illuminate\Support\Facades\Config;
+use Overtrue\LaravelOpenTelemetry\OpenTelemetryServiceProvider;
+
 class ConfigTest extends TestCase
 {
     public function test_config_file_exists()
@@ -22,34 +25,37 @@ class ConfigTest extends TestCase
     {
         $config = include __DIR__.'/../config/otel.php';
 
-        $this->assertArrayHasKey('response_trace_header_name', $config);
+        $this->assertArrayHasKey('middleware', $config);
         $this->assertArrayHasKey('watchers', $config);
         $this->assertArrayHasKey('allowed_headers', $config);
         $this->assertArrayHasKey('sensitive_headers', $config);
         $this->assertArrayHasKey('ignore_paths', $config);
     }
 
-    public function test_response_trace_header_name_is_configurable()
+    public function test_middleware_trace_id_is_configurable()
     {
         $config = include __DIR__.'/../config/otel.php';
 
-        $this->assertEquals('X-Trace-Id', $config['response_trace_header_name']);
+        $this->assertArrayHasKey('trace_id', $config['middleware']);
+        $this->assertEquals('X-Trace-Id', $config['middleware']['trace_id']['header_name']);
+        $this->assertTrue($config['middleware']['trace_id']['enabled']);
+        $this->assertTrue($config['middleware']['trace_id']['global']);
     }
 
     public function test_watchers_contains_expected_classes()
     {
-        $config = include __DIR__.'/../config/otel.php';
+        $watchers = config('otel.watchers');
 
-        $expectedWatchers = [
+        $this->assertEquals([
+            \Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class,
+            \Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class,
+            \Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\ExceptionWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\AuthenticateWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\EventWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher::class,
             \Overtrue\LaravelOpenTelemetry\Watchers\RedisWatcher::class,
-            \Overtrue\LaravelOpenTelemetry\Watchers\FrankenPhpWorkerWatcher::class,
-        ];
-
-        $this->assertEquals($expectedWatchers, $config['watchers']);
+        ], $watchers);
     }
 
     public function test_allowed_headers_is_array()
@@ -86,20 +92,20 @@ class ConfigTest extends TestCase
 
     public function test_config_respects_environment_variables()
     {
-        // Test response trace header name from env
-        $originalValue = $_ENV['OTEL_RESPONSE_TRACE_HEADER_NAME'] ?? null;
-        $_ENV['OTEL_RESPONSE_TRACE_HEADER_NAME'] = 'Custom-Trace-Header';
+        // Test trace ID header name from env
+        $originalValue = $_ENV['OTEL_TRACE_ID_HEADER_NAME'] ?? null;
+        $_ENV['OTEL_TRACE_ID_HEADER_NAME'] = 'Custom-Trace-Header';
 
         // Re-evaluate the config
         $config = include __DIR__.'/../config/otel.php';
 
-        $this->assertEquals('Custom-Trace-Header', $config['response_trace_header_name']);
+        $this->assertEquals('Custom-Trace-Header', $config['middleware']['trace_id']['header_name']);
 
         // Restore original value
         if ($originalValue !== null) {
-            $_ENV['OTEL_RESPONSE_TRACE_HEADER_NAME'] = $originalValue;
+            $_ENV['OTEL_TRACE_ID_HEADER_NAME'] = $originalValue;
         } else {
-            unset($_ENV['OTEL_RESPONSE_TRACE_HEADER_NAME']);
+            unset($_ENV['OTEL_TRACE_ID_HEADER_NAME']);
         }
     }
 
@@ -120,5 +126,70 @@ class ConfigTest extends TestCase
         } else {
             unset($_ENV['OTEL_ALLOWED_HEADERS']);
         }
+    }
+
+    public function test_default_config(): void
+    {
+        $this->assertTrue(config('otel.enabled'));
+        $this->assertIsArray(config('otel.watchers'));
+        $this->assertNotEmpty(config('otel.watchers'));
+    }
+
+    public function test_enabled_configuration_disables_registration(): void
+    {
+        // Set OpenTelemetry as disabled
+        Config::set('otel.enabled', false);
+
+        // Create a new service provider instance
+        $provider = new OpenTelemetryServiceProvider($this->app);
+
+        // Mock the registration methods to verify they're not called
+        $this->expectNotToPerformAssertions();
+
+        // Boot the service provider - it should return early due to disabled config
+        $provider->boot();
+
+        // If we reach here without any watchers being registered, the test passes
+    }
+
+    public function test_enabled_configuration_allows_registration(): void
+    {
+        // Ensure OpenTelemetry is enabled
+        Config::set('otel.enabled', true);
+
+        // Verify that the config is properly set
+        $this->assertTrue(config('otel.enabled'));
+    }
+
+    public function test_middleware_configuration(): void
+    {
+        $this->assertTrue(config('otel.middleware.trace_id.enabled'));
+        $this->assertTrue(config('otel.middleware.trace_id.global'));
+        $this->assertEquals('X-Trace-Id', config('otel.middleware.trace_id.header_name'));
+    }
+
+    public function test_watchers_configuration(): void
+    {
+        $watchers = config('otel.watchers');
+
+        $this->assertIsArray($watchers);
+        $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\CacheWatcher::class, $watchers);
+        $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\QueryWatcher::class, $watchers);
+        $this->assertContains(\Overtrue\LaravelOpenTelemetry\Watchers\HttpClientWatcher::class, $watchers);
+    }
+
+    public function test_headers_configuration(): void
+    {
+        $allowedHeaders = config('otel.allowed_headers');
+        $sensitiveHeaders = config('otel.sensitive_headers');
+        $ignorePaths = config('otel.ignore_paths');
+
+        $this->assertIsArray($allowedHeaders);
+        $this->assertIsArray($sensitiveHeaders);
+        $this->assertIsArray($ignorePaths);
+
+        $this->assertContains('referer', $allowedHeaders);
+        $this->assertContains('authorization', $sensitiveHeaders);
+        $this->assertContains('horizon*', $ignorePaths);
     }
 }

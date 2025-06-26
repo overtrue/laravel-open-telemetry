@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Overtrue\LaravelOpenTelemetry\Support;
 
-use Carbon\CarbonInterface;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\Context\Context;
@@ -28,7 +27,7 @@ class SpanBuilder
         return $this;
     }
 
-    public function setAttribute(string $key, $value): self
+    public function setAttribute(string $key, mixed $value): self
     {
         $this->builder->setAttribute($key, $value);
 
@@ -36,7 +35,7 @@ class SpanBuilder
     }
 
     /**
-     * @param  iterable<string,mixed>  $attributes
+     * @param  array<string,mixed>  $attributes
      */
     public function setAttributes(array $attributes): self
     {
@@ -46,7 +45,7 @@ class SpanBuilder
     }
 
     /**
-     * @param  CarbonInterface|int  $timestamp  A carbon instance or a timestamp in nanoseconds
+     * Set the start timestamp in nanoseconds
      */
     public function setStartTimestamp(int $timestampNanos): self
     {
@@ -62,12 +61,49 @@ class SpanBuilder
         return $this;
     }
 
-    public function start(): StartedSpan
+    /**
+     * Start a span without activating its scope
+     * This is the new default behavior - more predictable and safer
+     */
+    public function start(): SpanInterface
+    {
+        return $this->builder->startSpan();
+    }
+
+    /**
+     * Start a span and activate its scope
+     * Use this when you need the span to be active in the current context
+     */
+    public function startAndActivate(): StartedSpan
     {
         $span = $this->builder->startSpan();
-        $scope = $span->activate();
+
+        // Store span in context and activate
+        $spanContext = $span->storeInContext(Context::getCurrent());
+        $scope = $spanContext->activate();
 
         return new StartedSpan($span, $scope);
+    }
+
+    /**
+     * Start a span without activating its scope
+     * Alias for start() method for clarity
+     */
+    public function startSpan(): SpanInterface
+    {
+        return $this->start();
+    }
+
+    /**
+     * Start a span and store it in context without activating scope
+     * Returns both the span and the context for manual scope management
+     */
+    public function startWithContext(): array
+    {
+        $span = $this->builder->startSpan();
+        $context = $span->storeInContext(Context::getCurrent());
+
+        return [$span, $context];
     }
 
     /**
@@ -75,16 +111,14 @@ class SpanBuilder
      */
     public function measure(\Closure $callback): mixed
     {
-        $span = $this->builder->startSpan();
-        $scope = $span->activate();
+        $span = $this->startAndActivate();
 
         try {
-            return $callback($span);
+            return $callback($span->getSpan());
         } catch (\Throwable $exception) {
             $span->recordException($exception);
             throw $exception;
         } finally {
-            $scope->detach();
             $span->end();
         }
     }

@@ -6,9 +6,11 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Redis\Events\CommandExecuted;
-use OpenTelemetry\API\Instrumentation\CachedInstrumentation;
 use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
+use OpenTelemetry\Context\Context;
+use OpenTelemetry\SemConv\TraceAttributes;
+use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
 /**
  * Redis Watcher
@@ -17,10 +19,6 @@ use OpenTelemetry\Contrib\Instrumentation\Laravel\Watchers\Watcher;
  */
 class RedisWatcher extends Watcher
 {
-    public function __construct(
-        private readonly CachedInstrumentation $instrumentation,
-    ) {}
-
     public function register(Application $app): void
     {
         $app['events']->listen(CommandExecuted::class, [$this, 'recordCommand']);
@@ -28,31 +26,30 @@ class RedisWatcher extends Watcher
 
     public function recordCommand(CommandExecuted $event): void
     {
-        $span = $this->instrumentation
-            ->tracer()
-            ->spanBuilder(sprintf('redis %s', strtolower($event->command)))
+        $now = (int) (microtime(true) * 1e9);
+        $startTime = $now - (int) ($event->time * 1e6);
+
+        $span = Measure::tracer()
+            ->spanBuilder(SpanNameHelper::redis($event->command))
             ->setSpanKind(SpanKind::KIND_CLIENT)
+            ->setStartTimestamp($startTime)
+            ->setParent(Context::getCurrent())
             ->startSpan();
 
         $attributes = [
-            'db.system' => 'redis',
-            'db.operation' => strtolower($event->command),
-            'redis.command' => strtoupper($event->command),
-            'redis.connection_name' => $event->connectionName,
-            'redis.time' => $event->time,
+            TraceAttributes::DB_SYSTEM => 'redis',
+            TraceAttributes::DB_STATEMENT => $this->formatCommand($event->command, $event->parameters),
+            'db.connection' => $event->connectionName,
+            'db.command.time_ms' => $event->time,
         ];
 
-        // Record parameters (limit length to avoid oversized spans)
-        if (! empty($event->parameters)) {
-            $argsString = implode(' ', array_map(function ($arg) {
-                return is_string($arg) ? (strlen($arg) > 100 ? substr($arg, 0, 100).'...' : $arg) :
-                       (is_scalar($arg) ? (string) $arg : gettype($arg));
-            }, array_slice($event->parameters, 0, 5))); // Only record first 5 parameters
-            $attributes['redis.args'] = $argsString;
-            $attributes['redis.args_count'] = count($event->parameters);
-        }
+        $span->setAttributes($attributes)->end($now);
+    }
 
-        $span->setAttributes($attributes);
-        $span->end();
+    protected function formatCommand(string $command, array $parameters): string
+    {
+        $parameters = implode(' ', array_map(fn ($param) => is_string($param) ? (strlen($param) > 100 ? substr($param, 0, 100).'...' : $param) : (is_scalar($param) ? strval($param) : gettype($param)), $parameters));
+
+        return "{$command} {$parameters}";
     }
 }

@@ -1,23 +1,139 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Overtrue\LaravelOpenTelemetry\Support;
 
+use Closure;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Context as LaravelContext;
+use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Globals;
+use OpenTelemetry\API\Trace\NoopTracer;
 use OpenTelemetry\API\Trace\Span;
+use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
+use OpenTelemetry\API\Trace\SpanKind;
+use OpenTelemetry\API\Trace\StatusCode;
 use OpenTelemetry\API\Trace\TracerInterface;
 use OpenTelemetry\Context\Context;
+use OpenTelemetry\Context\ContextInterface;
+use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
 
 class Measure
 {
-    protected static ?StartedSpan $currentSpan = null;
+    private static ?SpanInterface $rootSpan = null;
+
+    private static ?ScopeInterface $rootScope = null;
 
     public function __construct(protected Application $app) {}
 
+    // ======================= Enable/Disable Management =======================
+
+    public function enable(): void
+    {
+        LaravelContext::addHidden('otel.tracing.enabled', true);
+    }
+
+    public function disable(): void
+    {
+        LaravelContext::addHidden('otel.tracing.enabled', false);
+    }
+
+    public function isEnabled(): bool
+    {
+        // If context has not been set, fall back to the general config.
+        if (LaravelContext::missingHidden('otel.tracing.enabled')) {
+            return config('otel.enabled', true);
+        }
+
+        return LaravelContext::getHidden('otel.tracing.enabled');
+    }
+
+    public function reset(): void
+    {
+        LaravelContext::addHidden('otel.tracing.enabled', config('otel.enabled', true));
+
+        // Only end root span in Octane mode
+        // In FPM mode, each request is a separate process, so root span management is handled by middleware
+        if ($this->isOctane()) {
+            $this->endRootSpan();
+        }
+    }
+
+    // ======================= Root Span Management =======================
+
+    /**
+     * Start root span and set it as the current active span.
+     */
+    public function startRootSpan(string $name, array $attributes = [], ?ContextInterface $parentContext = null): SpanInterface
+    {
+        $parentContext = $parentContext ?: \OpenTelemetry\Context\Context::getRoot();
+        $tracer = $this->tracer();
+
+        $span = $tracer->spanBuilder($name)
+            ->setSpanKind(SpanKind::KIND_SERVER)
+            ->setParent($parentContext)
+            ->setAttributes($attributes)
+            ->startSpan();
+
+        // The activate() call returns a ScopeInterface object. We MUST hold on to this object
+        // and store it in a static property to prevent it from being garbage-collected prematurely.
+        $scope = $span->storeInContext($parentContext)->activate();
+        self::$rootScope = $scope;
+
+        Log::debug('OpenTelemetry: Starting root span', [
+            'name' => $name,
+            'attributes' => $attributes,
+            'trace_id' => $span->getContext()->getTraceId(),
+        ]);
+
+        self::$rootSpan = $span;
+
+        return $span;
+    }
+
+    /**
+     * Set root span (for Octane mode)
+     */
+    public function setRootSpan(SpanInterface $span, ScopeInterface $scope): void
+    {
+        self::$rootSpan = $span;
+        self::$rootScope = $scope;
+    }
+
+    /**
+     * Get root span
+     */
+    public function getRootSpan(): ?SpanInterface
+    {
+        return self::$rootSpan;
+    }
+
+    /**
+     * End root span
+     */
+    public function endRootSpan(): void
+    {
+        if (self::$rootSpan) {
+            self::$rootSpan->end();
+            self::$rootSpan = null;
+        }
+
+        if (self::$rootScope) {
+            try {
+                self::$rootScope->detach();
+            } catch (\Throwable $e) {
+                // Scope may have already been detached, ignore errors
+            }
+            self::$rootScope = null;
+        }
+    }
+
+    // ======================= Core Span API =======================
+
+    /**
+     * Create span builder
+     */
     public function span(string $spanName): SpanBuilder
     {
         return new SpanBuilder(
@@ -25,48 +141,144 @@ class Measure
         );
     }
 
-    public function start(string $spanName): StartedSpan
+    /**
+     * Quickly start a span
+     */
+    public function start(string $spanName, ?Closure $callback = null): StartedSpan
     {
-        $span = $this->span($spanName)->start();
-        static::$currentSpan = $span;
+        $span = $this->tracer()
+            ->spanBuilder($spanName)
+            ->startSpan();
 
-        return $span;
+        $scope = $span->activate();
+
+        $startedSpan = new StartedSpan($span, $scope);
+
+        if ($callback) {
+            $callback($startedSpan);
+        }
+
+        return $startedSpan;
     }
 
-    public function end(): void
+    /**
+     * Execute a callback with a span
+     */
+    public function trace(string $name, Closure $callback, array $attributes = []): mixed
     {
-        if (static::$currentSpan) {
-            static::$currentSpan->end();
-            static::$currentSpan = null;
+        $span = $this->tracer()
+            ->spanBuilder($name)
+            ->setAttributes($attributes)
+            ->startSpan();
+
+        $scope = $span->storeInContext(\OpenTelemetry\Context\Context::getCurrent())->activate();
+
+        try {
+            $result = $callback($span);
+            $span->setStatus(StatusCode::STATUS_OK);
+
+            return $result;
+        } catch (\Throwable $e) {
+            $span->recordException($e);
+            $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
+            throw $e;
+        } finally {
+            $span->end();
+            $scope->detach();
         }
     }
 
-    public function tracer(): TracerInterface
+    /**
+     * End current active span
+     */
+    public function end(): void
     {
-        return Globals::tracerProvider()->getTracer('io.opentelemetry.contrib.php.laravel');
+        $span = Span::getCurrent();
+        if ($span && $span !== Span::getInvalid()) {
+            $span->end();
+        }
     }
 
+    // ======================= Event Recording =======================
+
+    /**
+     * Add event to current span
+     */
+    public function addEvent(string $name, array $attributes = []): void
+    {
+        $this->activeSpan()->addEvent($name, $attributes);
+    }
+
+    /**
+     * Record exception
+     */
+    public function recordException(\Throwable $exception, array $attributes = []): void
+    {
+        $this->activeSpan()->recordException($exception, $attributes);
+    }
+
+    /**
+     * Set span status
+     */
+    public function setStatus(string $code, ?string $description = null): void
+    {
+        $this->activeSpan()->setStatus($code, $description);
+    }
+
+    // ======================= Core OpenTelemetry API =======================
+
+    /**
+     * Get the tracer instance
+     */
+    public function tracer(): TracerInterface
+    {
+        if (! $this->isEnabled()) {
+            return new NoopTracer;
+        }
+
+        return $this->app->get(TracerInterface::class);
+    }
+
+    /**
+     * Get current active span
+     */
     public function activeSpan(): SpanInterface
     {
         return Span::getCurrent();
     }
 
+    /**
+     * Get current active scope
+     */
     public function activeScope(): ?ScopeInterface
     {
         return Context::storage()->scope();
     }
 
-    public function traceId(): string
+    /**
+     * Get current trace ID
+     */
+    public function traceId(): ?string
     {
-        return $this->activeSpan()->getContext()->getTraceId();
+        $traceId = $this->activeSpan()->getContext()->getTraceId();
+
+        return SpanContextValidator::isValidTraceId($traceId) ? $traceId : null;
     }
 
-    public function propagator()
+    // ======================= Context Propagation =======================
+
+    /**
+     * Get propagator
+     */
+    public function propagator(): TextMapPropagatorInterface
     {
         return Globals::propagator();
     }
 
-    public function propagationHeaders(?Context $context = null): array
+    /**
+     * Get propagation headers
+     */
+    public function propagationHeaders(?ContextInterface $context = null): array
     {
         $headers = [];
         $this->propagator()->inject($headers, null, $context);
@@ -74,71 +286,70 @@ class Measure
         return $headers;
     }
 
-    public function extractContextFromPropagationHeaders(array $headers): Context
+    /**
+     * Extract context from propagation headers
+     */
+    public function extractContextFromPropagationHeaders(array $headers): ContextInterface
     {
         return $this->propagator()->extract($headers);
     }
 
+    // ======================= Environment Management =======================
+
     /**
-     * 检查是否在 FrankenPHP worker 模式下运行
+     * Force flush (for Octane mode)
      */
-    public function isFrankenPhpWorkerMode(): bool
+    public function flush(): void
     {
-        return function_exists('frankenphp_handle_request') &&
-               php_sapi_name() === 'frankenphp' &&
-               (bool) ($_SERVER['FRANKENPHP_WORKER'] ?? false);
+        Globals::tracerProvider()->forceFlush();
     }
 
     /**
-     * 清理 worker 模式下的 OpenTelemetry 状态
+     * Check if in Octane environment
      */
-    public function cleanupWorkerState(): void
+    public function isOctane(): bool
     {
-        if (! $this->isFrankenPhpWorkerMode()) {
-            return;
-        }
-
-        try {
-            // 结束当前活动的 span
-            if (static::$currentSpan) {
-                static::$currentSpan->end();
-                static::$currentSpan = null;
-            }
-
-            // 清理 span 上下文
-            $currentSpan = $this->activeSpan();
-            if ($currentSpan->isRecording()) {
-                $currentSpan->end();
-            }
-
-            // 清理作用域
-            $scope = $this->activeScope();
-            if ($scope) {
-                $scope->detach();
-            }
-
-        } catch (\Throwable $e) {
-            // 静默处理清理错误
-            error_log('OpenTelemetry worker cleanup error: '.$e->getMessage());
-        }
+        return isset($_SERVER['LARAVEL_OCTANE']) || isset($_ENV['LARAVEL_OCTANE']);
     }
 
     /**
-     * 获取 worker 模式状态信息
+     * Check if current span is recording
      */
-    public function getWorkerStatus(): array
+    public function isRecording(): bool
     {
-        if (! $this->isFrankenPhpWorkerMode()) {
-            return ['worker_mode' => false];
+        $tracerProvider = Globals::tracerProvider();
+        if (method_exists($tracerProvider, 'getSampler')) {
+            $sampler = $tracerProvider->getSampler();
+
+            // This is a simplified check. A more robust check might involve checking sampler decision.
+            return ! ($sampler instanceof \OpenTelemetry\SDK\Trace\Sampler\NeverOffSampler);
         }
+
+        // Fallback for NoopTracerProvider or other types
+        return ! ($tracerProvider instanceof \OpenTelemetry\API\Trace\NoopTracerProvider);
+    }
+
+    /**
+     * Get current tracking status
+     */
+    public function getStatus(): array
+    {
+        $tracerProvider = Globals::tracerProvider();
+        $isRecording = $this->isRecording();
+        $activeSpan = $this->activeSpan();
+        $traceId = $activeSpan->getContext()->getTraceId();
 
         return [
-            'worker_mode' => true,
-            'memory_usage' => memory_get_usage(true),
-            'peak_memory' => memory_get_peak_usage(true),
-            'current_span_recording' => $this->activeSpan()->isRecording(),
-            'trace_id' => $this->traceId(),
-            'pid' => getmypid(),
+            'is_recording' => $isRecording,
+            'is_noop' => ! $isRecording,
+            'active_spans_count' => Context::storage()->count(),
+            'current_trace_id' => $traceId !== '00000000000000000000000000000000' ? $traceId : null,
+            'tracer_provider' => [
+                'class' => get_class($tracerProvider),
+                'source' => $this->app->bound('opentelemetry.tracer.provider.source')
+                    ? $this->app->get('opentelemetry.tracer.provider.source')
+                    : 'unknown',
+            ],
         ];
     }
 }
