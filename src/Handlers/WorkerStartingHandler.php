@@ -17,11 +17,6 @@ class WorkerStartingHandler
      */
     public function handle(WorkerStarting $event): void
     {
-        // Only handle in Octane mode
-        if (! Measure::isOctane()) {
-            return;
-        }
-
         // Validate OTEL environment variables
         if (! config('otel.enabled', true)) {
             return;
