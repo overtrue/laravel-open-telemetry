@@ -8,7 +8,6 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Redis\Events\CommandExecuted;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;
-use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
@@ -37,8 +36,8 @@ class RedisWatcher extends Watcher
             ->startSpan();
 
         $attributes = [
-            TraceAttributes::DB_SYSTEM => 'redis',
-            TraceAttributes::DB_STATEMENT => $this->formatCommand($event->command, $event->parameters),
+            'db.system.name' => 'redis',
+            'dn.statement' => $this->formatCommand($event->command, $event->parameters),
             'db.connection' => $event->connectionName,
             'db.command.time_ms' => $event->time,
         ];

@@ -15,9 +15,7 @@ use Throwable;
 class TraceRequest
 {
     /**
-     * Handle an incoming request.
-     *
-     * @return mixed
+     * @throws \Throwable
      */
     public function handle(Request $request, Closure $next)
     {

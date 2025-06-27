@@ -4,10 +4,10 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Support\Facades\Context as LaravelContext;
 use Illuminate\Support\Facades\Log;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\NoopTracer;
+use OpenTelemetry\API\Trace\NoopTracerProvider;
 use OpenTelemetry\API\Trace\Span;
 use OpenTelemetry\API\Trace\SpanContextValidator;
 use OpenTelemetry\API\Trace\SpanInterface;
@@ -18,6 +18,7 @@ use OpenTelemetry\Context\Context;
 use OpenTelemetry\Context\ContextInterface;
 use OpenTelemetry\Context\Propagation\TextMapPropagatorInterface;
 use OpenTelemetry\Context\ScopeInterface;
+use Throwable;
 
 class Measure
 {
@@ -25,33 +26,34 @@ class Measure
 
     private static ?ScopeInterface $rootScope = null;
 
+    private static ?bool $enabled = null;
+
     public function __construct(protected Application $app) {}
 
     // ======================= Enable/Disable Management =======================
 
     public function enable(): void
     {
-        LaravelContext::addHidden('otel.tracing.enabled', true);
+        self::$enabled = true;
     }
 
     public function disable(): void
     {
-        LaravelContext::addHidden('otel.tracing.enabled', false);
+        self::$enabled = false;
     }
 
     public function isEnabled(): bool
     {
-        // If context has not been set, fall back to the general config.
-        if (LaravelContext::missingHidden('otel.tracing.enabled')) {
+        if (self::$enabled === null) {
             return config('otel.enabled', true);
         }
 
-        return LaravelContext::getHidden('otel.tracing.enabled');
+        return self::$enabled;
     }
 
     public function reset(): void
     {
-        LaravelContext::addHidden('otel.tracing.enabled', config('otel.enabled', true));
+        self::$enabled = null;
 
         // Only end root span in Octane mode
         // In FPM mode, each request is a separate process, so root span management is handled by middleware
@@ -67,7 +69,7 @@ class Measure
      */
     public function startRootSpan(string $name, array $attributes = [], ?ContextInterface $parentContext = null): SpanInterface
     {
-        $parentContext = $parentContext ?: \OpenTelemetry\Context\Context::getRoot();
+        $parentContext = $parentContext ?: Context::getRoot();
         $tracer = $this->tracer();
 
         $span = $tracer->spanBuilder($name)
@@ -122,7 +124,7 @@ class Measure
         if (self::$rootScope) {
             try {
                 self::$rootScope->detach();
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Scope may have already been detached, ignore errors
             }
             self::$rootScope = null;
@@ -171,14 +173,14 @@ class Measure
             ->setAttributes($attributes)
             ->startSpan();
 
-        $scope = $span->storeInContext(\OpenTelemetry\Context\Context::getCurrent())->activate();
+        $scope = $span->storeInContext(Context::getCurrent())->activate();
 
         try {
             $result = $callback($span);
             $span->setStatus(StatusCode::STATUS_OK);
 
             return $result;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $span->recordException($e);
             $span->setStatus(StatusCode::STATUS_ERROR, $e->getMessage());
             throw $e;
@@ -194,7 +196,8 @@ class Measure
     public function end(): void
     {
         $span = Span::getCurrent();
-        if ($span && $span !== Span::getInvalid()) {
+
+        if ($span !== Span::getInvalid()) {
             $span->end();
         }
     }
@@ -212,7 +215,7 @@ class Measure
     /**
      * Record exception
      */
-    public function recordException(\Throwable $exception, array $attributes = []): void
+    public function recordException(Throwable $exception, array $attributes = []): void
     {
         $this->activeSpan()->recordException($exception, $attributes);
     }
@@ -236,7 +239,17 @@ class Measure
             return new NoopTracer;
         }
 
-        return $this->app->get(TracerInterface::class);
+        try {
+            return $this->app->get(TracerInterface::class);
+        } catch (Throwable $e) {
+            Log::error('OpenTelemetry: Tracer not found', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return new NoopTracer;
+        }
     }
 
     /**
@@ -301,7 +314,7 @@ class Measure
      */
     public function flush(): void
     {
-        Globals::tracerProvider()->forceFlush();
+        Globals::tracerProvider()?->forceFlush();
     }
 
     /**
@@ -318,15 +331,9 @@ class Measure
     public function isRecording(): bool
     {
         $tracerProvider = Globals::tracerProvider();
-        if (method_exists($tracerProvider, 'getSampler')) {
-            $sampler = $tracerProvider->getSampler();
-
-            // This is a simplified check. A more robust check might involve checking sampler decision.
-            return ! ($sampler instanceof \OpenTelemetry\SDK\Trace\Sampler\NeverOffSampler);
-        }
 
         // Fallback for NoopTracerProvider or other types
-        return ! ($tracerProvider instanceof \OpenTelemetry\API\Trace\NoopTracerProvider);
+        return ! ($tracerProvider instanceof NoopTracerProvider);
     }
 
     /**
@@ -342,7 +349,6 @@ class Measure
         return [
             'is_recording' => $isRecording,
             'is_noop' => ! $isRecording,
-            'active_spans_count' => Context::storage()->count(),
             'current_trace_id' => $traceId !== '00000000000000000000000000000000' ? $traceId : null,
             'tracer_provider' => [
                 'class' => get_class($tracerProvider),

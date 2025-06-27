@@ -95,7 +95,7 @@ class AuthenticateWatcher extends Watcher
         $span->setAttributes([
             'auth.guard' => $event->guard,
             'auth.credentials.count' => count($event->credentials),
-            TraceAttributes::ENDUSER_ID => $event->user ? $event->user->getAuthIdentifier() : null,
+            TraceAttributes::ENDUSER_ID => $event->user?->getAuthIdentifier(),
         ]);
 
         $span->end();
@@ -111,7 +111,7 @@ class AuthenticateWatcher extends Watcher
 
         $span->setAttributes([
             'auth.guard' => $event->guard,
-            TraceAttributes::ENDUSER_ID => $event->user ? $event->user->getAuthIdentifier() : null,
+            TraceAttributes::ENDUSER_ID => $event->user?->getAuthIdentifier(),
             'auth.user.type' => $event->user ? get_class($event->user) : null,
         ]);
 

@@ -10,6 +10,7 @@ use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 use OpenTelemetry\API\Trace\SpanInterface;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\API\Trace\StatusCode;
@@ -57,7 +58,7 @@ class HttpClientWatcher extends Watcher
         $tracer = Measure::tracer();
         $span = $tracer->spanBuilder(SpanNameHelper::httpClient($request->request->method(), $processedUrl))
             ->setSpanKind(SpanKind::KIND_CLIENT)
-            ->setParent(Context::getCurrent())  // ✅ 修复：使用当前 context 作为父 context
+            ->setParent(Context::getCurrent())
             ->setAttributes([
                 TraceAttributes::HTTP_REQUEST_METHOD => $request->request->method(),
                 TraceAttributes::URL_FULL => $processedUrl,
@@ -181,13 +182,7 @@ class HttpClientWatcher extends Watcher
      */
     private function isHeaderAllowed(string $headerName, array $allowedHeaders): bool
     {
-        foreach ($allowedHeaders as $pattern) {
-            if (fnmatch(strtolower($pattern), $headerName)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($allowedHeaders, fn ($pattern) => fnmatch(strtolower($pattern), $headerName));
     }
 
     /**
@@ -195,13 +190,7 @@ class HttpClientWatcher extends Watcher
      */
     private function isHeaderSensitive(string $headerName, array $sensitiveHeaders): bool
     {
-        foreach ($sensitiveHeaders as $pattern) {
-            if (fnmatch(strtolower($pattern), $headerName)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($sensitiveHeaders, fn ($pattern) => fnmatch(strtolower($pattern), $headerName));
     }
 
     private function createRequestComparisonHash(Request $request): string
@@ -242,13 +231,7 @@ class HttpClientWatcher extends Watcher
             'x-b3-spanid',
         ];
 
-        foreach ($tracingHeaders as $headerName) {
-            if (isset($headers[$headerName]) || isset($headers[ucfirst($headerName)]) || isset($headers[strtoupper($headerName)])) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($tracingHeaders, fn ($headerName) => isset($headers[$headerName]) || isset($headers[ucfirst($headerName)]) || isset($headers[strtoupper($headerName)]));
     }
 
     /**
@@ -262,11 +245,9 @@ class HttpClientWatcher extends Watcher
         }
 
         // Register global request middleware to automatically add propagation headers
-        \Illuminate\Support\Facades\Http::globalRequestMiddleware(function ($request) {
-            // 获取当前上下文的传播头
+        Http::globalRequestMiddleware(function ($request) {
             $propagationHeaders = Measure::propagationHeaders();
 
-            // 为每个传播头添加到请求中
             foreach ($propagationHeaders as $name => $value) {
                 $request = $request->withHeader($name, $value);
             }

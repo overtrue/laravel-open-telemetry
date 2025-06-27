@@ -71,12 +71,6 @@ class EventWatcher extends Watcher
             return true;
         }
 
-        foreach ($this->eventsToSkip as $eventToSkip) {
-            if (fnmatch($eventToSkip, $eventName)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($this->eventsToSkip, fn ($eventToSkip) => fnmatch($eventToSkip, $eventName));
     }
 }

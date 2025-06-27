@@ -46,7 +46,7 @@ class AddTraceId
 
         // If no root span, try to get from current active span
         $currentSpan = Span::getCurrent();
-        if ($currentSpan && $currentSpan->getContext()->isValid()) {
+        if ($currentSpan->getContext()->isValid()) {
             return $currentSpan->getContext()->getTraceId();
         }
 

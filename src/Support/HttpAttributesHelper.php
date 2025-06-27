@@ -18,15 +18,8 @@ class HttpAttributesHelper
     public static function shouldIgnoreRequest(Request $request): bool
     {
         $ignorePaths = config('otel.ignore_paths', []);
-        $path = $request->path();
 
-        foreach ($ignorePaths as $pattern) {
-            if (fnmatch($pattern, $path)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($ignorePaths, fn ($pattern) => fnmatch($pattern, $request->path()));
     }
 
     /**
@@ -134,13 +127,8 @@ class HttpAttributesHelper
      */
     private static function isHeaderAllowed(string $headerName, array $allowedHeaders): bool
     {
-        foreach ($allowedHeaders as $pattern) {
-            if (fnmatch(strtolower($pattern), $headerName)) {
-                return true;
-            }
-        }
+        return array_any($allowedHeaders, fn ($pattern) => fnmatch(strtolower($pattern), $headerName));
 
-        return false;
     }
 
     /**
@@ -148,13 +136,7 @@ class HttpAttributesHelper
      */
     private static function isHeaderSensitive(string $headerName, array $sensitiveHeaders): bool
     {
-        foreach ($sensitiveHeaders as $pattern) {
-            if (fnmatch(strtolower($pattern), $headerName)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($sensitiveHeaders, fn ($pattern) => fnmatch(strtolower($pattern), $headerName));
     }
 
     /**

@@ -2,7 +2,6 @@
 
 namespace Overtrue\LaravelOpenTelemetry\Tests\Support;
 
-use Illuminate\Support\Facades\Context as LaravelContext;
 use Mockery;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Trace\SpanBuilderInterface;
@@ -28,10 +27,12 @@ class MeasureTest extends TestCase
 
     public function test_is_enabled_falls_back_to_config()
     {
-        LaravelContext::forget('otel.tracing.enabled');
+        Measure::reset();
 
         config()->set('otel.enabled', true);
         $this->assertTrue(Measure::isEnabled());
+
+        Measure::reset();
 
         config()->set('otel.enabled', false);
         $this->assertFalse(Measure::isEnabled());
