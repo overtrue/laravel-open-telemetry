@@ -18,24 +18,24 @@ class EventWatcher extends Watcher
      * @var string[]
      */
     protected array $eventsToSkip = [
-        'Illuminate\Log\Events\MessageLogged',
-        'Illuminate\Database\Events\QueryExecuted',
-        'Illuminate\Cache\Events\CacheHit',
-        'Illuminate\Cache\Events\CacheMissed',
-        'Illuminate\Cache\Events\KeyWritten',
-        'Illuminate\Cache\Events\KeyForgotten',
-        'Illuminate\Queue\Events\JobProcessing',
-        'Illuminate\Queue\Events\JobProcessed',
-        'Illuminate\Queue\Events\JobFailed',
-        'Illuminate\Auth\Events\Attempting',
-        'Illuminate\Auth\Events\Authenticated',
-        'Illuminate\Auth\Events\Login',
-        'Illuminate\Auth\Events\Failed',
-        'Illuminate\Auth\Events\Logout',
-        'Illuminate\Redis\Events\CommandExecuted',
-        'Illuminate\Http\Client\Events\RequestSending',
-        'Illuminate\Http\Client\Events\ResponseReceived',
-        'Illuminate\Http\Client\Events\ConnectionFailed',
+        'Illuminate\\Log\\Events\\MessageLogged',
+        'Illuminate\\Database\\Events\\QueryExecuted',
+        'Illuminate\\Cache\\Events\\CacheHit',
+        'Illuminate\\Cache\\Events\\CacheMissed',
+        'Illuminate\\Cache\\Events\\KeyWritten',
+        'Illuminate\\Cache\\Events\\KeyForgotten',
+        'Illuminate\\Queue\\Events\\JobProcessing',
+        'Illuminate\\Queue\\Events\\JobProcessed',
+        'Illuminate\\Queue\\Events\\JobFailed',
+        'Illuminate\\Auth\\Events\\Attempting',
+        'Illuminate\\Auth\\Events\\Authenticated',
+        'Illuminate\\Auth\\Events\\Login',
+        'Illuminate\\Auth\\Events\\Failed',
+        'Illuminate\\Auth\\Events\\Logout',
+        'Illuminate\\Redis\\Events\\CommandExecuted',
+        'Illuminate\\Http\\Client\\Events\\RequestSending',
+        'Illuminate\\Http\\Client\\Events\\ResponseReceived',
+        'Illuminate\\Http\\Client\\Events\\ConnectionFailed',
     ];
 
     public array $events = [
@@ -47,22 +47,22 @@ class EventWatcher extends Watcher
         $app['events']->listen('*', [$this, 'recordEvent']);
     }
 
-    public function recordEvent($event): void
+    public function recordEvent($eventName, $payload = []): void
     {
-        if ($this->shouldSkip($event)) {
+        if ($this->shouldSkip($eventName)) {
             return;
         }
 
         $attributes = [
-            'event.payload_count' => is_array($event) ? count($event) : 0,
+            'event.payload_count' => is_array($payload) ? count($payload) : 0,
         ];
 
-        $firstPayload = is_array($event) ? ($event[0] ?? null) : null;
+        $firstPayload = is_array($payload) ? ($payload[0] ?? null) : null;
         if (is_object($firstPayload)) {
             $attributes['event.object_type'] = get_class($firstPayload);
         }
 
-        Measure::addEvent($event, $attributes);
+        Measure::addEvent($eventName, $attributes);
     }
 
     protected function shouldSkip(string $eventName): bool
@@ -71,6 +71,6 @@ class EventWatcher extends Watcher
             return true;
         }
 
-        return array_any($this->eventsToSkip, fn ($eventToSkip) => fnmatch($eventToSkip, $eventName));
+        return in_array($eventName, $this->eventsToSkip);
     }
 }

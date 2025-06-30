@@ -9,11 +9,8 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
-use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Context\Context;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
 /**
  * Queue Watcher
@@ -34,12 +31,6 @@ class QueueWatcher extends Watcher
     {
         $jobClass = is_object($event->job) ? get_class($event->job) : $event->job;
 
-        $span = Measure::tracer()
-            ->spanBuilder(SpanNameHelper::queue('publish', $jobClass))
-            ->setSpanKind(SpanKind::KIND_PRODUCER)
-            ->setParent(Context::getCurrent())
-            ->startSpan();
-
         $attributes = [
             TraceAttributes::MESSAGING_SYSTEM => $event->connectionName,
             TraceAttributes::MESSAGING_DESTINATION_NAME => $event->queue,
@@ -51,20 +42,13 @@ class QueueWatcher extends Watcher
             $attributes['messaging.job.delay_seconds'] = $event->job->delay;
         }
 
-        $span->setAttributes($attributes);
-        $span->end();
+        Measure::addEvent('queue.job.queued', $attributes);
     }
 
     public function recordJobProcessing(JobProcessing $event): void
     {
         $payload = $event->job->payload();
         $jobClass = $payload['displayName'] ?? 'unknown';
-
-        $span = Measure::tracer()
-            ->spanBuilder(SpanNameHelper::queue('process', $jobClass))
-            ->setSpanKind(SpanKind::KIND_CONSUMER)
-            ->setParent(Context::getCurrent())
-            ->startSpan();
 
         $attributes = [
             TraceAttributes::MESSAGING_SYSTEM => $event->connectionName,
@@ -80,7 +64,7 @@ class QueueWatcher extends Watcher
             $attributes['messaging.job.data_size'] = strlen(serialize($payload['data']));
         }
 
-        $span->setAttributes($attributes)->end();
+        Measure::addEvent('queue.job.processing', $attributes);
     }
 
     public function recordJobProcessed(JobProcessed $event): void

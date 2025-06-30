@@ -9,32 +9,22 @@ use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Cache\Events\KeyForgotten;
 use Illuminate\Cache\Events\KeyWritten;
 use Illuminate\Contracts\Foundation\Application;
-use OpenTelemetry\API\Trace\SpanKind;
-use OpenTelemetry\Context\Context;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Support\SpanNameHelper;
 
 class CacheWatcher extends Watcher
 {
     public function register(Application $app): void
     {
-        $app['events']->listen(CacheHit::class, fn ($event) => $this->recordSpan('hit', $event));
-        $app['events']->listen(CacheMissed::class, fn ($event) => $this->recordSpan('miss', $event));
-        $app['events']->listen(KeyWritten::class, fn ($event) => $this->recordSpan('set', $event));
-        $app['events']->listen(KeyForgotten::class, fn ($event) => $this->recordSpan('forget', $event));
+        $app['events']->listen(CacheHit::class, fn ($event) => $this->recordEvent('cache.hit', $event));
+        $app['events']->listen(CacheMissed::class, fn ($event) => $this->recordEvent('cache.miss', $event));
+        $app['events']->listen(KeyWritten::class, fn ($event) => $this->recordEvent('cache.set', $event));
+        $app['events']->listen(KeyForgotten::class, fn ($event) => $this->recordEvent('cache.forget', $event));
     }
 
-    protected function recordSpan(string $operation, object $event): void
+    protected function recordEvent(string $eventName, object $event): void
     {
-        $span = Measure::tracer()
-            ->spanBuilder(SpanNameHelper::cache($operation, $event->key))
-            ->setSpanKind(SpanKind::KIND_INTERNAL)
-            ->setParent(Context::getCurrent())
-            ->startSpan();
-
         $attributes = [
             'cache.key' => $event->key,
-            'cache.operation' => $operation,
             'cache.store' => $this->getStoreName($event),
         ];
 
@@ -42,8 +32,7 @@ class CacheWatcher extends Watcher
             $attributes['cache.ttl'] = property_exists($event, 'seconds') ? $event->seconds : null;
         }
 
-        $span->setAttributes($attributes);
-        $span->end();
+        Measure::addEvent($eventName, $attributes);
     }
 
     private function getStoreName(object $event): ?string
