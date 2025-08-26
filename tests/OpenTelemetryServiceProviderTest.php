@@ -115,15 +115,11 @@ class OpenTelemetryServiceProviderTest extends TestCase
     {
         // Mock Log facade
         Log::shouldReceive('debug')
-            ->with('OpenTelemetry: Service provider initialization started', Mockery::type('array'))
+            ->with('[laravel-open-telemetry] Service provider registered successfully')
             ->once();
 
         Log::shouldReceive('debug')
-            ->with('OpenTelemetry: Service provider registered successfully')
-            ->once();
-
-        Log::shouldReceive('debug')
-            ->with('OpenTelemetry: Middleware registered globally for automatic tracing')
+            ->with('[laravel-open-telemetry] Middleware registered globally for automatic tracing')
             ->once();
 
         // Create service provider

@@ -28,8 +28,6 @@ class WorkerStartingHandler
         // Worker initialization logic can be added here
         // For example, setting up worker-specific spans or contexts
 
-        Log::debug('OpenTelemetry Octane: Worker starting handler called');
-
         // 验证OTEL环境变量
         $otelVars = [
             'OTEL_SERVICE_NAME',
@@ -39,14 +37,8 @@ class WorkerStartingHandler
 
         foreach ($otelVars as $var) {
             if (! isset($_ENV[$var]) && ! isset($_SERVER[$var])) {
-                Log::warning('OpenTelemetry Octane: Missing required environment variable', [
+                Log::warning('[laravel-open-telemetry] Octane: Missing required environment variable', [
                     'variable' => $var,
-                ]);
-            } else {
-                $value = $_ENV[$var] ?? $_SERVER[$var] ?? 'unknown';
-                Log::debug('OpenTelemetry Octane: Environment variable configured', [
-                    'variable' => $var,
-                    'value' => $value,
                 ]);
             }
         }

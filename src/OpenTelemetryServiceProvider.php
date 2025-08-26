@@ -26,14 +26,8 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
         // Check if OpenTelemetry is enabled
         if (! config('otel.enabled', true)) {
-            Log::debug('OpenTelemetry: Service provider registration skipped - OpenTelemetry is disabled');
-
             return;
         }
-
-        Log::debug('OpenTelemetry: Service provider initialization started', [
-            'config' => config('otel'),
-        ]);
 
         $this->registerCommands();
         $this->registerWatchers();
@@ -60,7 +54,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
         $this->app->alias(TracerInterface::class, 'opentelemetry.tracer');
 
-        Log::debug('OpenTelemetry: Service provider registered successfully');
+        Log::debug('[laravel-open-telemetry] Service provider registered successfully');
     }
 
     /**
@@ -126,7 +120,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             // Enable TraceId middleware globally by default
             if (config('otel.middleware.trace_id.global', true)) {
                 $kernel->pushMiddleware(AddTraceId::class);
-                Log::debug('OpenTelemetry: Middleware registered globally for automatic tracing');
+                Log::debug('[laravel-open-telemetry] Middleware registered globally for automatic tracing');
             }
         }
     }

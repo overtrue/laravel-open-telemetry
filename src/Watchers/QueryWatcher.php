@@ -41,13 +41,6 @@ class QueryWatcher extends Watcher
             'db.query.time_ms' => $event->time,
         ]);
 
-        Log::debug('OpenTelemetry: QueryWatcher: Span created', [
-            'span_id' => $span->getContext()->getSpanId(),
-            'trace_id' => $span->getContext()->getTraceId(),
-            'operation' => $this->getOperationName($event->sql),
-            'table' => $this->extractTableName($event->sql),
-        ]);
-
         $span->end($now);
     }
 

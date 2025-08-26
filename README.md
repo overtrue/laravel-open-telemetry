@@ -90,6 +90,8 @@ You can completely enable or disable tracing for the entire application. This is
 ```
 Set `OTEL_ENABLED=false` in your `.env` file to disable all tracing.
 
+**Log Format**: All OpenTelemetry logs are prefixed with `[laravel-open-telemetry]` for easy identification and filtering.
+
 #### Filtering Requests and Headers
 
 You can control which requests are traced and which headers are recorded to enhance performance and protect sensitive data. All patterns support wildcards (`*`) and are case-insensitive.

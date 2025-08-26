@@ -69,14 +69,7 @@ class WorkerStartingHandlerTest extends TestCase
         $_ENV['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://localhost:4318';
         $_ENV['OTEL_EXPORTER_OTLP_PROTOCOL'] = 'http/protobuf';
 
-        // Mock Log facade
-        Log::shouldReceive('debug')
-            ->once()
-            ->with('OpenTelemetry Octane: Worker starting handler called');
-
-        Log::shouldReceive('debug')
-            ->times(3)
-            ->with('OpenTelemetry Octane: Environment variable configured', \Mockery::type('array'));
+        // Mock Log facade - no debug logs expected since we removed them
 
         $event = new WorkerStarting('app', 1);
 
@@ -108,14 +101,10 @@ class WorkerStartingHandlerTest extends TestCase
         unset($_SERVER['OTEL_EXPORTER_OTLP_ENDPOINT']);
         unset($_SERVER['OTEL_EXPORTER_OTLP_PROTOCOL']);
 
-        // Mock Log facade
-        Log::shouldReceive('debug')
-            ->once()
-            ->with('OpenTelemetry Octane: Worker starting handler called');
-
+        // Mock Log facade - only warning logs expected
         Log::shouldReceive('warning')
             ->times(3)
-            ->with('OpenTelemetry Octane: Missing required environment variable', \Mockery::type('array'));
+            ->with('[laravel-open-telemetry] Octane: Missing required environment variable', \Mockery::type('array'));
 
         $event = new WorkerStarting('app', 1);
 
@@ -143,14 +132,7 @@ class WorkerStartingHandlerTest extends TestCase
         $_SERVER['OTEL_EXPORTER_OTLP_ENDPOINT'] = 'http://server:4318';
         $_SERVER['OTEL_EXPORTER_OTLP_PROTOCOL'] = 'grpc';
 
-        // Mock Log facade
-        Log::shouldReceive('debug')
-            ->once()
-            ->with('OpenTelemetry Octane: Worker starting handler called');
-
-        Log::shouldReceive('debug')
-            ->times(3)
-            ->with('OpenTelemetry Octane: Environment variable configured', \Mockery::type('array'));
+        // Mock Log facade - no debug logs expected since we removed them
 
         $event = new WorkerStarting('app', 1);
 

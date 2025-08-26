@@ -83,12 +83,6 @@ class Measure
         $scope = $span->storeInContext($parentContext)->activate();
         self::$rootScope = $scope;
 
-        Log::debug('OpenTelemetry: Starting root span', [
-            'name' => $name,
-            'attributes' => $attributes,
-            'trace_id' => $span->getContext()->getTraceId(),
-        ]);
-
         self::$rootSpan = $span;
 
         return $span;
@@ -242,7 +236,7 @@ class Measure
         try {
             return $this->app->get(TracerInterface::class);
         } catch (Throwable $e) {
-            Log::error('OpenTelemetry: Tracer not found', [
+            Log::error('[laravel-open-telemetry] Tracer not found', [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
