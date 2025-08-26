@@ -15,7 +15,7 @@ jobs:
         uses: shivammathur/setup-php@v2
       - name: Install dependencies
         run: composer install --ignore-platform-reqs
-      - name: PHPCSFixer check
+      - name: Style check
         run: composer check-style
   phpunit:
     strategy:

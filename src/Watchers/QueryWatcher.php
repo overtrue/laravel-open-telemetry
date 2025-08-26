@@ -6,7 +6,6 @@ namespace Overtrue\LaravelOpenTelemetry\Watchers;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\Context\Context;

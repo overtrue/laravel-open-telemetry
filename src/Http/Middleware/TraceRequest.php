@@ -22,6 +22,7 @@ class TraceRequest
         // Check if request path should be ignored
         if (HttpAttributesHelper::shouldIgnoreRequest($request)) {
             Measure::disable();
+
             return $next($request);
         }
 
