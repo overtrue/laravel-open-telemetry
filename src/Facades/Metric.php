@@ -3,10 +3,6 @@
 namespace Overtrue\LaravelOpenTelemetry\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use OpenTelemetry\API\Metrics\CounterInterface;
-use OpenTelemetry\API\Metrics\GaugeInterface;
-use OpenTelemetry\API\Metrics\HistogramInterface;
-use OpenTelemetry\API\Metrics\ObservableGaugeInterface;
 
 /**
  * @method static void enable()
