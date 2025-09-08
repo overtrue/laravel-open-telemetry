@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events;
 use OpenTelemetry\API\Globals;
+use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
@@ -41,6 +42,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             __DIR__.'/../config/otel.php', 'otel',
         );
 
+        // Register Tracer
         $this->app->singleton(Support\Measure::class, function ($app) {
             return new Support\Measure($app);
         });
@@ -53,6 +55,19 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         });
 
         $this->app->alias(TracerInterface::class, 'opentelemetry.tracer');
+
+        // Register metric
+        $this->app->singleton(Support\Metric::class, function ($app) {
+            return new Support\Metric($app);
+        });
+        $this->app->alias(Support\Metric::class, 'opentelemetry.metric');
+
+        $this->app->singleton(MeterInterface::class, function () {
+            return Globals::meterProvider()
+                ->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
+        });
+
+        $this->app->alias(MeterInterface::class, 'opentelemetry.meter');
 
         Log::debug('[laravel-open-telemetry] Service provider registered successfully');
     }
