@@ -14,7 +14,6 @@ use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
-use Overtrue\LaravelOpenTelemetry\Facades\Metric;
 use Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId;
 use Overtrue\LaravelOpenTelemetry\Http\Middleware\TraceRequest;
 

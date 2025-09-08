@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool isEnabled()
  * @method static void reset()
  * @method static \OpenTelemetry\API\Metrics\MeterInterface meter()
- * @method static \OpenTelemetry\API\Metrics\CounterInterface createCounter(string $name, ?string $unit = null, ?string $description = null, array $advisory = [])
- * @method static \OpenTelemetry\API\Metrics\HistogramInterface createHistogram(string $name, ?string $unit = null, ?string $description = null, array $advisory = [])
- * @method static \OpenTelemetry\API\Metrics\GaugeInterface createGauge(string $name, ?string $unit = null, ?string $description = null, array $advisory = [])
- * @method static \OpenTelemetry\API\Metrics\ObservableGaugeInterface createObservableGauge(string $name, ?string $unit = null, ?string $description = null, array|callable $advisory = [], callable ...$callbacks)
+ * @method static \OpenTelemetry\API\Metrics\CounterInterface counter(string $name, ?string $unit = null, ?string $description = null, array $advisories = [])
+ * @method static \OpenTelemetry\API\Metrics\HistogramInterface histogram(string $name, ?string $unit = null, ?string $description = null, array $advisories = [])
+ * @method static \OpenTelemetry\API\Metrics\GaugeInterface gauge(string $name, ?string $unit = null, ?string $description = null, array $advisories = [])
+ * @method static \OpenTelemetry\API\Metrics\ObservableGaugeInterface observableGauge(string $name, ?string $unit = null, ?string $description = null, array|callable $advisories = [], callable ...$callbacks)
  *
  * @see \Overtrue\LaravelOpenTelemetry\Support\Metric
  */

@@ -63,27 +63,27 @@ class Metric
         }
     }
 
-    public function createCounter(string $name, ?string $unit = null,
-        ?string $description = null, array $advisory = []): CounterInterface
+    public function counter(string $name, ?string $unit = null,
+        ?string $description = null, array $advisories = []): CounterInterface
     {
-        return $this->meter()->createCounter($name, $unit, $description, $advisory);
+        return $this->meter()->createCounter($name, $unit, $description, $advisories);
     }
 
-    public function createHistogram(string $name, ?string $unit = null,
-        ?string $description = null, array $advisory = []): HistogramInterface
+    public function histogram(string $name, ?string $unit = null,
+        ?string $description = null, array $advisories = []): HistogramInterface
     {
-        return $this->meter()->createHistogram($name, $unit, $description, $advisory);
+        return $this->meter()->createHistogram($name, $unit, $description, $advisories);
     }
 
-    public function createGauge(string $name, ?string $unit = null,
-        ?string $description = null, array $advisory = []): GaugeInterface
+    public function gauge(string $name, ?string $unit = null,
+        ?string $description = null, array $advisories = []): GaugeInterface
     {
-        return $this->meter()->createGauge($name, $unit, $description, $advisory);
+        return $this->meter()->createGauge($name, $unit, $description, $advisories);
     }
 
-    public function createObservableGauge(string $name, ?string $unit = null,
-        ?string $description = null, array|callable $advisory = [], callable ...$callbacks): ObservableGaugeInterface
+    public function observableGauge(string $name, ?string $unit = null,
+        ?string $description = null, array|callable $advisories = [], callable ...$callbacks): ObservableGaugeInterface
     {
-        return $this->meter()->createObservableGauge($name, $unit, $description, $advisory, $callbacks);
+        return $this->meter()->createObservableGauge($name, $unit, $description, $advisories, ...$callbacks);
     }
 }
