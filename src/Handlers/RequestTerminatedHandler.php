@@ -6,6 +6,7 @@ namespace Overtrue\LaravelOpenTelemetry\Handlers;
 
 use Laravel\Octane\Events\RequestTerminated;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Facades\Metric;
 
 class RequestTerminatedHandler
 {
@@ -16,5 +17,6 @@ class RequestTerminatedHandler
     {
         // In Octane mode, we need to force flush the tracer provider.
         Measure::flush();
+        Metric::flush();
     }
 }

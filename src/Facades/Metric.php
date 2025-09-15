@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \OpenTelemetry\API\Metrics\HistogramInterface histogram(string $name, ?string $unit = null, ?string $description = null, array $advisories = [])
  * @method static \OpenTelemetry\API\Metrics\GaugeInterface gauge(string $name, ?string $unit = null, ?string $description = null, array $advisories = [])
  * @method static \OpenTelemetry\API\Metrics\ObservableGaugeInterface observableGauge(string $name, ?string $unit = null, ?string $description = null, array|callable $advisories = [], callable ...$callbacks)
+ * @method static void flush()
  *
  * @see \Overtrue\LaravelOpenTelemetry\Support\Metric
  */

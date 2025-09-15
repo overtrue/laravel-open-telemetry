@@ -4,6 +4,7 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Log;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Metrics\GaugeInterface;
 use OpenTelemetry\API\Metrics\HistogramInterface;
@@ -37,6 +38,14 @@ class Metric
         }
 
         return self::$enabled;
+    }
+
+    /**
+     * Force flush (for Octane mode)
+     */
+    public function flush(): void
+    {
+        Globals::meterProvider()?->forceFlush();
     }
 
     // ======================= Core OpenTelemetry API =======================
