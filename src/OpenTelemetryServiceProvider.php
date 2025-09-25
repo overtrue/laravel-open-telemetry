@@ -12,6 +12,7 @@ use Laravel\Octane\Events;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
+use OpenTelemetry\SDK\Common\Util\ShutdownHandler;
 use OpenTelemetry\SDK\Metrics\MeterProviderFactory;
 use OpenTelemetry\SDK\Resource\Detectors\Sdk;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
@@ -69,6 +70,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->app->singleton(MeterInterface::class, function () {
             $resourceInfo = (new Sdk)->getResource();
             $meterProvider = (new MeterProviderFactory)->create($resourceInfo);
+            ShutdownHandler::register($meterProvider->shutdown(...));
             Metric::setProvider($meterProvider);
 
             return $meterProvider->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
