@@ -17,7 +17,7 @@ class Metric
 {
     private static ?bool $enabled = null;
 
-    public static ?MeterProviderInterface $meterProvider = null;
+    private static ?MeterProviderInterface $meterProvider = null;
 
     public function __construct(protected Application $app) {}
 
@@ -48,6 +48,16 @@ class Metric
     public function flush(): void
     {
         self::$meterProvider?->forceFlush();
+    }
+
+    public static function getProvider(): MeterProviderInterface
+    {
+        return self::$meterProvider;
+    }
+
+    public static function setProvider(MeterProviderInterface $meterProvider): void
+    {
+        self::$meterProvider = $meterProvider;
     }
 
     // ======================= Core OpenTelemetry API =======================

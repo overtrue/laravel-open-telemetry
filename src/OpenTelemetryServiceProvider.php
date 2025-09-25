@@ -68,9 +68,10 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         // register custom meter
         $this->app->singleton(MeterInterface::class, function () {
             $resourceInfo = (new Sdk)->getResource();
-            Metric::$meterProvider = (new MeterProviderFactory)->create($resourceInfo);
+            $meterProvider = (new MeterProviderFactory)->create($resourceInfo);
+            Metric::setProvider($meterProvider);
 
-            return Metric::$meterProvider->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
+            return $meterProvider->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
         });
 
         $this->app->alias(MeterInterface::class, 'opentelemetry.meter');
