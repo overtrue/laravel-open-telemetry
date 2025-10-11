@@ -6,7 +6,7 @@ return [
      * Enable or disable OpenTelemetry tracing
      * When disabled, no watchers will be registered and no tracing will occur
      */
-    'enabled' => env('OTEL_ENABLED', true),
+    'enabled' => env('OTEL_ENABLED', false),
 
     /**
      * The name of the tracer that will be used to create spans.
