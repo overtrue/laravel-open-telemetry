@@ -46,6 +46,11 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             __DIR__.'/../config/otel.php', 'otel',
         );
 
+        // Check if OpenTelemetry is enabled
+        if (! config('otel.enabled', true)) {
+            return;
+        }
+
         // Register Tracer
         $this->app->singleton(Support\Measure::class, function ($app) {
             return new Support\Measure($app);
