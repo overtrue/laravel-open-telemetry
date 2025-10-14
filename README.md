@@ -66,6 +66,9 @@ OTEL_TRACES_EXPORTER=console
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
+# Optional: Add custom headers to OTLP exporter (e.g., for authentication)
+# OTEL_EXPORTER_OTLP_HEADERS="x-api-key=your-api-key,authorization=Bearer your-token"
+
 # Context propagation
 OTEL_PROPAGATORS=tracecontext,baggage
 ```
@@ -317,10 +320,57 @@ protected $middlewareGroups = [
 | `OTEL_TRACES_EXPORTER` | Trace exporter type | `otlp` | `console`, `otlp` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL | `http://localhost:4318` | `https://api.honeycomb.io` |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | OTLP protocol | `http/protobuf` | `http/protobuf`, `grpc` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Custom headers for OTLP exporter (comma-separated) | `null` | `x-api-key=key123,authorization=Bearer token` |
 | `OTEL_PROPAGATORS` | Context propagators | `tracecontext,baggage` | `tracecontext,baggage,b3` |
 | `OTEL_TRACES_SAMPLER` | Sampling strategy | `parentbased_always_on` | `always_on`, `traceidratio` |
 | `OTEL_TRACES_SAMPLER_ARG` | Sampler argument | `null` | `0.1` |
 | `OTEL_RESOURCE_ATTRIBUTES` | Resource attributes | `null` | `key1=value1,key2=value2` |
+
+### Authentication with OTLP Exporters
+
+Many OpenTelemetry collectors and backends require authentication. You can add custom headers (like API keys or bearer tokens) to your OTLP exporter using the `OTEL_EXPORTER_OTLP_HEADERS` environment variable.
+
+#### Examples:
+
+**API Key Authentication:**
+```env
+OTEL_EXPORTER_OTLP_HEADERS="x-api-key=your-api-key-here"
+```
+
+**Bearer Token Authentication:**
+```env
+OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer your-token-here"
+```
+
+**Multiple Headers:**
+```env
+OTEL_EXPORTER_OTLP_HEADERS="x-api-key=key123,x-tenant-id=tenant456"
+```
+
+**Common SaaS Providers:**
+
+For **Honeycomb**:
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=your-api-key"
+```
+
+For **New Relic**:
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.nr-data.net:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="api-key=your-new-relic-license-key"
+```
+
+For **Grafana Cloud**:
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-central-0.grafana.net/otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="authorization=Basic your-base64-encoded-credentials"
+```
+
+> **Note**: The `OTEL_EXPORTER_OTLP_HEADERS` variable accepts comma-separated `key=value` pairs. Make sure to properly escape values if they contain special characters.
 
 ## Testing
 

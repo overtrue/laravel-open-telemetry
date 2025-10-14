@@ -15,6 +15,29 @@ return [
     'tracer_name' => env('OTEL_TRACER_NAME', 'overtrue.laravel-open-telemetry'),
 
     /**
+     * OpenTelemetry SDK Configuration
+     *
+     * This package uses standard OpenTelemetry environment variables for configuration.
+     * These are automatically picked up by the OpenTelemetry PHP SDK:
+     *
+     * Core Variables:
+     * - OTEL_SERVICE_NAME: Name of your service (e.g., 'my-laravel-app')
+     * - OTEL_SERVICE_VERSION: Version of your service (e.g., '1.0.0')
+     * - OTEL_TRACES_EXPORTER: Trace exporter type ('console', 'otlp', etc.)
+     * - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint URL (e.g., 'http://localhost:4318')
+     * - OTEL_EXPORTER_OTLP_PROTOCOL: OTLP protocol ('http/protobuf' or 'grpc')
+     * - OTEL_EXPORTER_OTLP_HEADERS: Custom headers for authentication (e.g., 'x-api-key=key123')
+     *   Format: comma-separated key=value pairs
+     *   Example: "x-api-key=abc123,authorization=Bearer token456"
+     * - OTEL_PROPAGATORS: Context propagators (e.g., 'tracecontext,baggage')
+     * - OTEL_TRACES_SAMPLER: Sampling strategy ('always_on', 'traceidratio', etc.)
+     * - OTEL_TRACES_SAMPLER_ARG: Sampler argument (e.g., '0.1' for 10% sampling)
+     * - OTEL_RESOURCE_ATTRIBUTES: Additional resource attributes (e.g., 'key1=value1,key2=value2')
+     *
+     * For more information, see: https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
+     */
+
+    /**
      * Middleware Configuration
      */
     'middleware' => [

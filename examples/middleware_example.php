@@ -21,6 +21,9 @@ OTEL_TRACES_EXPORTER=console  # Use console for development, otlp for production
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
+# Optional: Add authentication headers to OTLP exporter
+# OTEL_EXPORTER_OTLP_HEADERS="x-api-key=your-api-key"
+
 # Context propagation
 OTEL_PROPAGATORS=tracecontext,baggage
 
@@ -175,6 +178,10 @@ OTEL_SERVICE_VERSION=2.1.0
 OTEL_TRACES_EXPORTER=otlp
 OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.company.com:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+
+# Add authentication headers for production collectors
+OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer production-token-here"
+
 OTEL_PROPAGATORS=tracecontext,baggage
 
 # Sampling configuration
@@ -239,3 +246,43 @@ Or in config/otel.php:
     ],
 ],
 */
+
+// 11. Authenticating with OTLP Collectors
+/*
+Many OpenTelemetry backends require authentication headers. You can configure these
+using the OTEL_EXPORTER_OTLP_HEADERS environment variable:
+
+Format: comma-separated key=value pairs
+Example: OTEL_EXPORTER_OTLP_HEADERS="x-api-key=abc123,authorization=Bearer token456"
+
+Common SaaS Provider Examples:
+
+# Honeycomb
+OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=your-api-key"
+
+# New Relic
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.nr-data.net:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="api-key=your-new-relic-license-key"
+
+# Grafana Cloud
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-central-0.grafana.net/otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="authorization=Basic base64-encoded-credentials"
+
+# Custom Collector with Bearer Token
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.example.com:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="authorization=Bearer your-secret-token"
+
+# Multiple Headers
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-collector.example.com:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS="x-api-key=key123,x-tenant-id=tenant456,authorization=Bearer token789"
+
+Note: The OTEL_EXPORTER_OTLP_HEADERS variable is automatically recognized by the
+OpenTelemetry PHP SDK and requires no additional configuration in this package.
+*/
+
