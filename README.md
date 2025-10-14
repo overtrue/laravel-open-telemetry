@@ -32,6 +32,19 @@ For most use cases, the new `start()` behavior is safer and recommended. See the
 - ✅ **Automatic Tracing**: Built-in watchers for cache, database, HTTP clients, queues, and more.
 - ✅ **Flexible Configuration**: Control traced paths, headers, and watchers to fit your needs.
 - ✅ **Standards Compliant**: Adheres to OpenTelemetry Semantic Conventions.
+- ✅ **Authentication Support**: Easy configuration for authenticated OTLP exporters via standard environment variables.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+  - [Automatic Tracing](#automatic-tracing)
+  - [Creating Custom Spans](#creating-custom-spans-with-measuretrace)
+  - [Advanced Span Creation](#advanced-span-creation-with-spanbuilder)
+- [Authentication with OTLP Exporters](#authentication-with-otlp-exporters) - How to send auth headers to collectors
+- [Environment Variables Reference](#environment-variables-reference)
+- [Testing](#testing)
 
 ## Installation
 
