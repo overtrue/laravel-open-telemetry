@@ -5,24 +5,6 @@
 
 This package provides a simple way to add OpenTelemetry to your Laravel application.
 
-## ⚠️ Breaking Changes in Recent Versions
-
-**SpanBuilder API Changes**: The `SpanBuilder::start()` method behavior has been updated for better safety and predictability:
-
-- **Before**: `start()` automatically activated the span's scope, which could cause issues in async scenarios
-- **Now**: `start()` only creates the span without activating its scope (safer default behavior)
-- **Migration**: If you need the old behavior, use `startAndActivate()` instead of `start()`
-
-```php
-// Old code (if you need scope activation)
-$span = Measure::span('my-operation')->start(); // This now returns SpanInterface
-
-// New code (for scope activation)
-$startedSpan = Measure::span('my-operation')->startAndActivate(); // Returns StartedSpan
-```
-
-For most use cases, the new `start()` behavior is safer and recommended. See the [Advanced Span Creation](#advanced-span-creation-with-spanbuilder) section for detailed usage patterns.
-
 ## Features
 
 - ✅ **Zero Configuration**: Works out of the box with sensible defaults.
