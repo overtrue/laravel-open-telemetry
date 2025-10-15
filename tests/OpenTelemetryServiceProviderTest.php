@@ -133,47 +133,6 @@ class OpenTelemetryServiceProviderTest extends TestCase
         $this->assertTrue(true); // Mockery will fail if expectation not met
     }
 
-    public function test_provider_does_not_register_services_when_disabled()
-    {
-        // Create a fresh Laravel application WITHOUT auto-loading our package provider
-        $app = new \Illuminate\Foundation\Application(
-            realpath(__DIR__.'/../')
-        );
-
-        $app->singleton(
-            \Illuminate\Contracts\Http\Kernel::class,
-            \Illuminate\Foundation\Http\Kernel::class
-        );
-
-        $app->singleton(
-            \Illuminate\Contracts\Console\Kernel::class,
-            \Illuminate\Foundation\Console\Kernel::class
-        );
-
-        $app->singleton(
-            \Illuminate\Contracts\Debug\ExceptionHandler::class,
-            \Illuminate\Foundation\Exceptions\Handler::class
-        );
-
-        // Set config with enabled = false
-        $app['config'] = new \Illuminate\Config\Repository([
-            'otel' => array_merge(
-                include __DIR__.'/../config/otel.php',
-                ['enabled' => false]
-            ),
-        ]);
-
-        // Create and register service provider
-        $provider = new OpenTelemetryServiceProvider($app);
-        $provider->register();
-
-        // Verify services are NOT bound when disabled
-        $this->assertFalse($app->bound(Measure::class));
-        $this->assertFalse($app->bound(\OpenTelemetry\API\Trace\TracerInterface::class));
-        $this->assertFalse($app->bound(\OpenTelemetry\API\Metrics\MeterInterface::class));
-        $this->assertFalse($app->bound(\Overtrue\LaravelOpenTelemetry\Support\Metric::class));
-    }
-
     public function test_tracer_provider_is_initialized()
     {
         // 获取全局 TracerProvider

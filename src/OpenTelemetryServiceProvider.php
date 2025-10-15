@@ -12,9 +12,6 @@ use Laravel\Octane\Events;
 use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Trace\TracerInterface;
-use OpenTelemetry\SDK\Common\Util\ShutdownHandler;
-use OpenTelemetry\SDK\Metrics\MeterProviderFactory;
-use OpenTelemetry\SDK\Resource\Detectors\Sdk;
 use Overtrue\LaravelOpenTelemetry\Console\Commands\TestCommand;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
 use Overtrue\LaravelOpenTelemetry\Http\Middleware\AddTraceId;
@@ -46,11 +43,6 @@ class OpenTelemetryServiceProvider extends ServiceProvider
             __DIR__.'/../config/otel.php', 'otel',
         );
 
-        // Check if OpenTelemetry is enabled
-        if (! config('otel.enabled', true)) {
-            return;
-        }
-
         // Register Tracer
         $this->app->singleton(Support\Measure::class, function ($app) {
             return new Support\Measure($app);
@@ -59,8 +51,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->app->alias(Support\Measure::class, 'opentelemetry.measure');
 
         $this->app->singleton(TracerInterface::class, function () {
-            return Globals::tracerProvider()
-                ->getTracer(config('otel.tracer_name', 'overtrue.laravel-open-telemetry'));
+            return Globals::tracerProvider()->getTracer(config('otel.tracer_name', 'overtrue.laravel-open-telemetry'));
         });
 
         $this->app->alias(TracerInterface::class, 'opentelemetry.tracer');
@@ -73,12 +64,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
 
         // register custom meter
         $this->app->singleton(MeterInterface::class, function () {
-            $resourceInfo = (new Sdk)->getResource();
-            $meterProvider = (new MeterProviderFactory)->create($resourceInfo);
-            ShutdownHandler::register($meterProvider->shutdown(...));
-            Metric::setProvider($meterProvider);
-
-            return $meterProvider->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
+            return Globals::meterProvider()->getMeter(config('otel.meter_name', 'overtrue.laravel-open-telemetry'));
         });
 
         $this->app->alias(MeterInterface::class, 'opentelemetry.meter');

@@ -4,11 +4,11 @@ namespace Overtrue\LaravelOpenTelemetry\Support;
 
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Log;
+use OpenTelemetry\API\Globals;
 use OpenTelemetry\API\Metrics\CounterInterface;
 use OpenTelemetry\API\Metrics\GaugeInterface;
 use OpenTelemetry\API\Metrics\HistogramInterface;
 use OpenTelemetry\API\Metrics\MeterInterface;
-use OpenTelemetry\API\Metrics\MeterProviderInterface;
 use OpenTelemetry\API\Metrics\Noop\NoopMeter;
 use OpenTelemetry\API\Metrics\ObservableGaugeInterface;
 use Throwable;
@@ -16,8 +16,6 @@ use Throwable;
 class Metric
 {
     private static ?bool $enabled = null;
-
-    private static ?MeterProviderInterface $meterProvider = null;
 
     public function __construct(protected Application $app) {}
 
@@ -47,17 +45,7 @@ class Metric
      */
     public function flush(): void
     {
-        self::$meterProvider?->forceFlush();
-    }
-
-    public static function getProvider(): MeterProviderInterface
-    {
-        return self::$meterProvider;
-    }
-
-    public static function setProvider(MeterProviderInterface $meterProvider): void
-    {
-        self::$meterProvider = $meterProvider;
+        Globals::meterProvider()?->forceFlush();
     }
 
     // ======================= Core OpenTelemetry API =======================
