@@ -11,6 +11,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Queue\Events\JobQueued;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\MeasureDataFlusher;
 
 /**
  * Queue Watcher
@@ -76,6 +77,8 @@ class QueueWatcher extends Watcher
             'messaging.job.class' => $jobClass,
             'messaging.job.status' => 'completed',
         ]);
+
+        MeasureDataFlusher::flush();
     }
 
     public function recordJobFailed(JobFailed $event): void
@@ -87,5 +90,7 @@ class QueueWatcher extends Watcher
             'messaging.job.class' => $jobClass,
             'messaging.job.status' => 'failed',
         ]);
+
+        MeasureDataFlusher::flush();
     }
 }
