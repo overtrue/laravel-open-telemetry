@@ -7,7 +7,6 @@ use Overtrue\LaravelOpenTelemetry\Facades\Metric;
 
 class MeasureDataFlusher
 {
-
     public static function flush(): void
     {
         Measure::flush();
