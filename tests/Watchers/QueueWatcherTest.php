@@ -11,6 +11,7 @@ use Illuminate\Queue\Jobs\Job;
 use Mockery;
 use OpenTelemetry\SemConv\TraceAttributes;
 use Overtrue\LaravelOpenTelemetry\Facades\Measure;
+use Overtrue\LaravelOpenTelemetry\Support\MeasureDataFlusher;
 use Overtrue\LaravelOpenTelemetry\Tests\TestCase;
 use Overtrue\LaravelOpenTelemetry\Watchers\QueueWatcher;
 
@@ -118,6 +119,9 @@ class QueueWatcherTest extends TestCase
                 'messaging.job.status' => 'completed',
             ]);
 
+        $flusher = Mockery::mock('alias:'.MeasureDataFlusher::class);
+        $flusher->shouldReceive('flush')->once();
+
         $this->watcher->recordJobProcessed($event);
     }
 
@@ -137,6 +141,9 @@ class QueueWatcherTest extends TestCase
                 'messaging.job.class' => 'App\\Jobs\\FailingJob',
                 'messaging.job.status' => 'failed',
             ]);
+
+        $flusher = Mockery::mock('alias:'.MeasureDataFlusher::class);
+        $flusher->shouldReceive('flush')->once();
 
         $this->watcher->recordJobFailed($event);
     }
