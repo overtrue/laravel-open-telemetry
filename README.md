@@ -1,5 +1,7 @@
 # Laravel OpenTelemetry
 
+> **⚠️ Deprecated**: This package is no longer maintained. Please consider using [keepsuit/laravel-opentelemetry](https://github.com/keepsuit/laravel-opentelemetry) instead.
+
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/overtrue/laravel-open-telemetry.svg?style=flat-square)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 [![Total Downloads](https://img.shields.io/packagist/dt/overtrue/laravel-open-telemetry.svg?style=flat-square)](https://packagist.org/packages/overtrue/laravel-open-telemetry)
 
